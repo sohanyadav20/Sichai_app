@@ -39,9 +39,9 @@ function todayStr() {
 function buildWhatsAppLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+  const message = `नमस्ते ${name} जी, आपका सिंचाई का बकाया ₹${due.toFixed(
     2,
-  )} है। कृपया जल्द भुगतान करें। धन्यवाद। सोहन यादव`;
+  )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
 }
 
