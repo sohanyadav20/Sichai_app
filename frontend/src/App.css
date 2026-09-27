@@ -345,6 +345,11 @@ td.empty {
   flex-wrap: wrap;
 }
 
+.farmer-row-actions {
+  display: flex;
+  gap: 4px;
+}
+
 .farmer-link {
   display: block;
   margin-top: 16px;
@@ -355,6 +360,128 @@ td.empty {
 
 .farmer-link:hover {
   text-decoration: underline;
+}
+
+.farmer-edit-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  background: #eef3ee;
+  border-radius: 6px;
+  margin-bottom: 4px;
+}
+
+.farmer-edit-row input {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.85rem;
+}
+
+.farmer-edit-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.farmer-edit-actions button {
+  flex: 1;
+  font-size: 0.8rem;
+  padding: 5px;
+}
+
+/* ================= Date range filter ================= */
+.date-filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.filter-btn {
+  background: #eef3ee;
+  color: #333;
+  padding: 6px 12px;
+  font-size: 0.82rem;
+  border-radius: 14px;
+}
+
+.filter-btn.active {
+  background: #3e6b4f;
+  color: white;
+}
+
+.date-filter-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.8rem;
+  color: #555;
+  gap: 3px;
+}
+
+.date-filter-row input[type='date'] {
+  padding: 5px 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.filtered-total {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #2c5e3f;
+}
+
+/* ================= WhatsApp reminder ================= */
+.summary-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.summary-bar-row .summary-bar {
+  flex: 1;
+}
+
+.whatsapp-btn {
+  display: inline-block;
+  background: #25d366;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.whatsapp-btn:hover {
+  background: #1fb855;
+}
+
+.dash-whatsapp {
+  display: inline-block;
+  background: #25d366;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+
+.dash-whatsapp:hover {
+  background: #1fb855;
+}
+
+.print-only-summary {
+  display: none;
+}
+
+@media print {
+  .print-only-summary {
+    display: block;
+  }
 }
 
 /* ================= Farmer self-service page (?view=farmer) ================= */
@@ -456,7 +583,8 @@ td.empty {
     color: #000;
     margin-bottom: 4px;
   }
-  .delete-btn {
+  .delete-btn,
+  .edit-btn {
     display: none !important;
   }
   .card {

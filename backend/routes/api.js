@@ -74,6 +74,30 @@ router.delete('/farmers/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ---- Farmer ka naam/mobile number sudharo ----
+router.put('/farmers/:id', requireAdmin, async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: 'किसान का नाम लिखें।' });
+    }
+    if (!phone || !phone.trim()) {
+      return res.status(400).json({ error: 'मोबाइल नंबर लिखें।' });
+    }
+    const farmer = await Farmer.findByIdAndUpdate(
+      req.params.id,
+      { name: name.trim(), phone: phone.trim() },
+      { new: true }
+    );
+    if (!farmer) {
+      return res.status(404).json({ error: 'किसान नहीं मिला।' });
+    }
+    res.json(farmer);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ================= Entries =================
 router.get('/farmers/:id/entries', async (req, res) => {
   try {

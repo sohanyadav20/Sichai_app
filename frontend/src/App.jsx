@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import {
   getFarmers,
   addFarmerApi,
+  updateFarmerApi,
   deleteFarmerApi,
   getEntries,
   addEntryApi,
@@ -21,6 +22,16 @@ const CROPS = ['गेहूं', 'धान', 'बेहन', 'गन्ना'
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
+}
+
+// Farmer ke phone number se WhatsApp reminder link banao (Indian number assume kiya)
+function buildWhatsAppLink(phone, name, due) {
+  const digits = (phone || '').replace(/\D/g, '');
+  const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
+  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+    2
+  )} है। कृपया जल्द भुगतान करें। धन्यवाद।`;
+  return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
 }
 
 // ================= Farmer self-service view (phone lookup + print) =================
@@ -255,6 +266,14 @@ function AdminApp() {
   const [paymentAmount, setPaymentAmount] = useState('');
   const [message, setMessage] = useState('');
 
+  const [editingFarmerId, setEditingFarmerId] = useState(null);
+  const [farmerEditName, setFarmerEditName] = useState('');
+  const [farmerEditPhone, setFarmerEditPhone] = useState('');
+
+  const [datePreset, setDatePreset] = useState('all'); // 'all' | 'thisMonth' | 'lastMonth' | 'custom'
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+
   const [dashboard, setDashboard] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
 
@@ -316,6 +335,60 @@ function AdminApp() {
     if (f) {
       setActiveFarmer(f);
       setView('farmers');
+    }
+  };
+
+  // ---- Date range filter ke liye from/to nikaalo ----
+  const getDateRange = () => {
+    const now = new Date();
+    if (datePreset === 'thisMonth') {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+      const to = todayStr();
+      return { from, to };
+    }
+    if (datePreset === 'lastMonth') {
+      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
+      const to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+      return { from, to };
+    }
+    if (datePreset === 'custom') {
+      return { from: customFrom || '0000-01-01', to: customTo || '9999-12-31' };
+    }
+    return { from: '0000-01-01', to: '9999-12-31' };
+  };
+
+  const { from: filterFrom, to: filterTo } = getDateRange();
+  const filteredEntries = entries.filter((e) => e.date >= filterFrom && e.date <= filterTo);
+  const filteredTotal = filteredEntries.reduce((s, e) => s + e.cost, 0);
+
+  // ---- Farmer edit actions ----
+  const handleStartEditFarmer = (farmer) => {
+    setEditingFarmerId(farmer._id);
+    setFarmerEditName(farmer.name);
+    setFarmerEditPhone(farmer.phone || '');
+  };
+
+  const handleCancelEditFarmer = () => {
+    setEditingFarmerId(null);
+    setFarmerEditName('');
+    setFarmerEditPhone('');
+  };
+
+  const handleSaveFarmerEdit = async () => {
+    if (!farmerEditName.trim() || !farmerEditPhone.trim()) {
+      showMessage('नाम और मोबाइल नंबर दोनों लिखें।');
+      return;
+    }
+    try {
+      const updated = await updateFarmerApi(editingFarmerId, farmerEditName.trim(), farmerEditPhone.trim());
+      await loadFarmers();
+      if (activeFarmer?._id === editingFarmerId) {
+        setActiveFarmer(updated);
+      }
+      handleCancelEditFarmer();
+      showMessage('किसान की जानकारी अपडेट हो गई।');
+    } catch (err) {
+      showMessage(err.response?.data?.error || 'त्रुटि हुई।');
     }
   };
 
@@ -462,24 +535,58 @@ function AdminApp() {
             🔗 किसान के लिए लिंक (रिकॉर्ड देखें)
           </a>
           <ul className="farmer-list">
-            {farmers.map((f) => (
-              <li
-                key={f._id}
-                className={activeFarmer?._id === f._id ? 'active' : ''}
-                onClick={() => setActiveFarmer(f)}
-              >
-                <span>{f.name}</span>
-                <button
-                  className="delete-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteFarmer(f);
-                  }}
+            {farmers.map((f) =>
+              editingFarmerId === f._id ? (
+                <li key={f._id} className="farmer-edit-row">
+                  <input
+                    type="text"
+                    value={farmerEditName}
+                    onChange={(e) => setFarmerEditName(e.target.value)}
+                    placeholder="नाम"
+                  />
+                  <input
+                    type="tel"
+                    value={farmerEditPhone}
+                    onChange={(e) => setFarmerEditPhone(e.target.value)}
+                    placeholder="मोबाइल नंबर"
+                  />
+                  <div className="farmer-edit-actions">
+                    <button onClick={handleSaveFarmerEdit}>सेव करें</button>
+                    <button className="cancel-btn" onClick={handleCancelEditFarmer}>
+                      रद्द करें
+                    </button>
+                  </div>
+                </li>
+              ) : (
+                <li
+                  key={f._id}
+                  className={activeFarmer?._id === f._id ? 'active' : ''}
+                  onClick={() => setActiveFarmer(f)}
                 >
-                  ✕
-                </button>
-              </li>
-            ))}
+                  <span>{f.name}</span>
+                  <span className="farmer-row-actions">
+                    <button
+                      className="edit-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStartEditFarmer(f);
+                      }}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      className="delete-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFarmer(f);
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </li>
+              )
+            )}
             {farmers.length === 0 && <li className="empty">कोई किसान नहीं</li>}
           </ul>
         </aside>
@@ -524,6 +631,17 @@ function AdminApp() {
                           <span>{f.entryCount} एंट्री</span>
                           <span>सिंचाई: ₹{f.totalCost.toFixed(2)}</span>
                           <span>जमा: ₹{f.totalPaid.toFixed(2)}</span>
+                          {f.due > 0 && f.phone && (
+                            <a
+                              className="dash-whatsapp"
+                              href={buildWhatsAppLink(f.phone, f.name, f.due)}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              📲 रिमाइंडर
+                            </a>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -618,6 +736,44 @@ function AdminApp() {
 
               <div className="card">
                 <h3>सिंचाई रिकॉर्ड</h3>
+                <div className="date-filter-row no-print">
+                  <button
+                    className={datePreset === 'all' ? 'filter-btn active' : 'filter-btn'}
+                    onClick={() => setDatePreset('all')}
+                  >
+                    सभी
+                  </button>
+                  <button
+                    className={datePreset === 'thisMonth' ? 'filter-btn active' : 'filter-btn'}
+                    onClick={() => setDatePreset('thisMonth')}
+                  >
+                    इस महीने
+                  </button>
+                  <button
+                    className={datePreset === 'lastMonth' ? 'filter-btn active' : 'filter-btn'}
+                    onClick={() => setDatePreset('lastMonth')}
+                  >
+                    पिछले महीने
+                  </button>
+                  <button
+                    className={datePreset === 'custom' ? 'filter-btn active' : 'filter-btn'}
+                    onClick={() => setDatePreset('custom')}
+                  >
+                    तारीख चुनें
+                  </button>
+                </div>
+                {datePreset === 'custom' && (
+                  <div className="date-filter-row no-print">
+                    <label>
+                      से
+                      <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+                    </label>
+                    <label>
+                      तक
+                      <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+                    </label>
+                  </div>
+                )}
                 <table>
                   <thead>
                     <tr>
@@ -631,7 +787,7 @@ function AdminApp() {
                     </tr>
                   </thead>
                   <tbody>
-                    {entries.map((e) => (
+                    {filteredEntries.map((e) => (
                       <tr key={e._id}>
                         <td>{e.date}</td>
                         <td>{e.crop}</td>
@@ -649,7 +805,7 @@ function AdminApp() {
                         </td>
                       </tr>
                     ))}
-                    {entries.length === 0 && (
+                    {filteredEntries.length === 0 && (
                       <tr>
                         <td colSpan="7" className="empty">
                           कोई एंट्री नहीं
@@ -658,6 +814,11 @@ function AdminApp() {
                     )}
                   </tbody>
                 </table>
+                {datePreset !== 'all' && filteredEntries.length > 0 && (
+                  <p className="filtered-total">
+                    चुनी हुई अवधि का कुल: ₹{filteredTotal.toFixed(2)} ({filteredEntries.length} एंट्री)
+                  </p>
+                )}
               </div>
 
               <div className="card">
@@ -703,7 +864,23 @@ function AdminApp() {
                 </table>
               </div>
 
-              <div className="summary-bar">
+              <div className="summary-bar-row no-print">
+                <div className="summary-bar">
+                  Total Sichai: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; Total Paid: ₹
+                  {summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; Due: ₹{summary.due.toFixed(2)}
+                </div>
+                {summary.due > 0 && activeFarmer.phone && (
+                  <a
+                    className="whatsapp-btn"
+                    href={buildWhatsAppLink(activeFarmer.phone, activeFarmer.name, summary.due)}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    📲 WhatsApp रिमाइंडर भेजें
+                  </a>
+                )}
+              </div>
+              <div className="summary-bar print-only-summary">
                 Total Sichai: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; Total Paid: ₹
                 {summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; Due: ₹{summary.due.toFixed(2)}
               </div>

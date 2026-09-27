@@ -19,6 +19,8 @@ export const setAdminKey = (key) => {
 
 export const getFarmers = () => api.get('/farmers').then((r) => r.data);
 export const addFarmerApi = (name, phone) => api.post('/farmers', { name, phone }).then((r) => r.data);
+export const updateFarmerApi = (id, name, phone) =>
+  api.put(`/farmers/${id}`, { name, phone }).then((r) => r.data);
 export const deleteFarmerApi = (id) => api.delete(`/farmers/${id}`);
 export const getFarmerByPhone = (phone) => api.get(`/farmers/by-phone/${phone}`).then((r) => r.data);
 
