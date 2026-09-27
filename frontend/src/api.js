@@ -25,6 +25,8 @@ export const getFarmerByPhone = (phone) => api.get(`/farmers/by-phone/${phone}`)
 export const getEntries = (farmerId) => api.get(`/farmers/${farmerId}/entries`).then((r) => r.data);
 export const addEntryApi = (farmerId, data) =>
   api.post(`/farmers/${farmerId}/entries`, data).then((r) => r.data);
+export const updateEntryApi = (entryId, data) =>
+  api.put(`/entries/${entryId}`, data).then((r) => r.data);
 export const deleteEntryApi = (id) => api.delete(`/entries/${id}`);
 
 export const getPayments = (farmerId) => api.get(`/farmers/${farmerId}/payments`).then((r) => r.data);
@@ -33,5 +35,6 @@ export const addPaymentApi = (farmerId, amount) =>
 export const deletePaymentApi = (id) => api.delete(`/payments/${id}`);
 
 export const getSummary = (farmerId) => api.get(`/farmers/${farmerId}/summary`).then((r) => r.data);
+export const getDashboard = () => api.get('/dashboard').then((r) => r.data);
 
 export default api;

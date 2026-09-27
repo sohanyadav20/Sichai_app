@@ -5,6 +5,7 @@ import {
   deleteFarmerApi,
   getEntries,
   addEntryApi,
+  updateEntryApi,
   deleteEntryApi,
   getPayments,
   addPaymentApi,
@@ -12,7 +13,8 @@ import {
   getSummary,
   getFarmerByPhone,
   adminLogin,
-  setAdminKey
+  setAdminKey,
+  getDashboard
 } from './api';
 
 const CROPS = ['गेहूं', 'धान', 'बेहन', 'गन्ना', 'चरी', 'सरसो', 'पलेवा', 'पिछला', 'सब्जी', 'अन्य'];
@@ -232,6 +234,7 @@ function AdminGate() {
 }
 
 function AdminApp() {
+  const [view, setView] = useState('farmers'); // 'farmers' | 'dashboard'
   const [farmers, setFarmers] = useState([]);
   const [activeFarmer, setActiveFarmer] = useState(null);
   const [newFarmerName, setNewFarmerName] = useState('');
@@ -248,8 +251,12 @@ function AdminApp() {
     minutes: 0,
     rate: 60
   });
+  const [editingEntryId, setEditingEntryId] = useState(null);
   const [paymentAmount, setPaymentAmount] = useState('');
   const [message, setMessage] = useState('');
+
+  const [dashboard, setDashboard] = useState(null);
+  const [dashboardLoading, setDashboardLoading] = useState(false);
 
   const showMessage = (msg) => {
     setMessage(msg);
@@ -259,6 +266,18 @@ function AdminApp() {
   const loadFarmers = useCallback(async () => {
     const data = await getFarmers();
     setFarmers(data);
+  }, []);
+
+  const loadDashboard = useCallback(async () => {
+    setDashboardLoading(true);
+    try {
+      const data = await getDashboard();
+      setDashboard(data);
+    } catch (err) {
+      showMessage('डैशबोर्ड लोड नहीं हो पाया।');
+    } finally {
+      setDashboardLoading(false);
+    }
   }, []);
 
   const loadFarmerData = useCallback(async (farmerId) => {
@@ -285,6 +304,20 @@ function AdminApp() {
   useEffect(() => {
     loadFarmerData(activeFarmer?._id);
   }, [activeFarmer, loadFarmerData]);
+
+  useEffect(() => {
+    if (view === 'dashboard') {
+      loadDashboard();
+    }
+  }, [view, loadDashboard]);
+
+  const openFarmerFromDashboard = (farmerId) => {
+    const f = farmers.find((x) => x._id === farmerId);
+    if (f) {
+      setActiveFarmer(f);
+      setView('farmers');
+    }
+  };
 
   // ---- Farmer actions ----
   const handleAddFarmer = async () => {
@@ -314,23 +347,46 @@ function AdminApp() {
     await loadFarmers();
   };
 
-  // ---- Entry actions ----
-  const handleAddEntry = async () => {
+  // ---- Entry actions (add ya edit, dono isi form se) ----
+  const handleSaveEntry = async () => {
     if (!activeFarmer) {
       showMessage('पहले लिस्ट से एक किसान चुनें।');
       return;
     }
     try {
-      await addEntryApi(activeFarmer._id, entryForm);
-      setEntryForm((f) => ({ ...f, hours: 0, minutes: 0, rate: 60 }));
+      if (editingEntryId) {
+        await updateEntryApi(editingEntryId, entryForm);
+        showMessage('एंट्री अपडेट हो गई।');
+      } else {
+        await addEntryApi(activeFarmer._id, entryForm);
+      }
+      setEntryForm({ date: todayStr(), crop: CROPS[0], hours: 0, minutes: 0, rate: 60 });
+      setEditingEntryId(null);
       await loadFarmerData(activeFarmer._id);
     } catch (err) {
       showMessage(err.response?.data?.error || 'त्रुटि हुई।');
     }
   };
 
+  const handleStartEditEntry = (entry) => {
+    setEditingEntryId(entry._id);
+    setEntryForm({
+      date: entry.date,
+      crop: entry.crop,
+      hours: entry.hours,
+      minutes: entry.minutes,
+      rate: entry.rate
+    });
+  };
+
+  const handleCancelEditEntry = () => {
+    setEditingEntryId(null);
+    setEntryForm({ date: todayStr(), crop: CROPS[0], hours: 0, minutes: 0, rate: 60 });
+  };
+
   const handleDeleteEntry = async (id) => {
     await deleteEntryApi(id);
+    if (editingEntryId === id) handleCancelEditEntry();
     await loadFarmerData(activeFarmer._id);
   };
 
@@ -365,6 +421,20 @@ function AdminApp() {
       <div className="main-layout">
         {/* Left: Farmer list */}
         <aside className="sidebar no-print">
+          <div className="view-tabs">
+            <button
+              className={view === 'farmers' ? 'tab-btn active' : 'tab-btn'}
+              onClick={() => setView('farmers')}
+            >
+              किसान सूची
+            </button>
+            <button
+              className={view === 'dashboard' ? 'tab-btn active' : 'tab-btn'}
+              onClick={() => setView('dashboard')}
+            >
+              📊 डैशबोर्ड
+            </button>
+          </div>
           <h2>किसान सूची</h2>
           <div className="add-row" style={{ flexDirection: 'column', gap: '6px' }}>
             <input
@@ -416,7 +486,55 @@ function AdminApp() {
 
         {/* Right: Entry + Payment */}
         <main className="content">
-          {!activeFarmer ? (
+          {view === 'dashboard' ? (
+            <div className="dashboard">
+              <h2>📊 डैशबोर्ड — सबका बकाया एक नज़र में</h2>
+              {dashboardLoading && <p>लोड हो रहा है...</p>}
+              {dashboard && (
+                <>
+                  <div className="dashboard-totals">
+                    <div className="dash-stat">
+                      <span className="dash-label">कुल सिंचाई</span>
+                      <span className="dash-value">₹{dashboard.grandTotalCost.toFixed(2)}</span>
+                    </div>
+                    <div className="dash-stat">
+                      <span className="dash-label">कुल जमा</span>
+                      <span className="dash-value">₹{dashboard.grandTotalPaid.toFixed(2)}</span>
+                    </div>
+                    <div className="dash-stat dash-due">
+                      <span className="dash-label">कुल बकाया</span>
+                      <span className="dash-value">₹{dashboard.grandTotalDue.toFixed(2)}</span>
+                    </div>
+                  </div>
+
+                  <div className="dashboard-list">
+                    {dashboard.farmers.map((f) => (
+                      <div
+                        key={f._id}
+                        className={`dash-card ${f.due > 0 ? 'due-pos' : 'due-clear'}`}
+                        onClick={() => openFarmerFromDashboard(f._id)}
+                      >
+                        <div className="dash-card-top">
+                          <span className="dash-name">{f.name}</span>
+                          <span className={`dash-badge ${f.due > 0 ? 'badge-due' : 'badge-clear'}`}>
+                            {f.due > 0 ? `₹${f.due.toFixed(2)} बकाया` : 'सब भुगतान हो गया'}
+                          </span>
+                        </div>
+                        <div className="dash-card-bottom">
+                          <span>{f.entryCount} एंट्री</span>
+                          <span>सिंचाई: ₹{f.totalCost.toFixed(2)}</span>
+                          <span>जमा: ₹{f.totalPaid.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {dashboard.farmers.length === 0 && (
+                      <p className="empty">अभी कोई किसान नहीं है।</p>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : !activeFarmer ? (
             <div className="placeholder">बाईं तरफ से एक किसान चुनें</div>
           ) : (
             <>
@@ -436,7 +554,7 @@ function AdminApp() {
               </div>
 
               <div className="card no-print">
-                <h3>नई सिंचाई एंट्री</h3>
+                <h3>{editingEntryId ? 'एंट्री सुधारें' : 'नई सिंचाई एंट्री'}</h3>
                 <div className="form-grid">
                   <label>
                     तारीख
@@ -488,9 +606,14 @@ function AdminApp() {
                     />
                   </label>
                 </div>
-                <button className="primary" onClick={handleAddEntry}>
-                  एंट्री जोड़ें
+                <button className="primary" onClick={handleSaveEntry}>
+                  {editingEntryId ? 'अपडेट करें' : 'एंट्री जोड़ें'}
                 </button>
+                {editingEntryId && (
+                  <button className="cancel-btn" onClick={handleCancelEditEntry}>
+                    रद्द करें
+                  </button>
+                )}
               </div>
 
               <div className="card">
@@ -516,7 +639,10 @@ function AdminApp() {
                         <td>{e.minutes}</td>
                         <td>{e.rate}</td>
                         <td>{e.cost.toFixed(2)}</td>
-                        <td>
+                        <td className="row-actions">
+                          <button className="edit-btn" onClick={() => handleStartEditEntry(e)}>
+                            ✎
+                          </button>
                           <button className="delete-btn" onClick={() => handleDeleteEntry(e._id)}>
                             ✕
                           </button>

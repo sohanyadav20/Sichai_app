@@ -129,6 +129,39 @@ router.delete('/entries/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// ---- Entry edit karo (galat entry sudharne ke liye) ----
+router.put('/entries/:id', requireAdmin, async (req, res) => {
+  try {
+    const { date, crop, hours, minutes, rate } = req.body;
+    const h = Number(hours) || 0;
+    const m = Number(minutes) || 0;
+    const r = Number(rate);
+
+    if (!date || !crop || isNaN(r)) {
+      return res.status(400).json({ error: 'सभी फील्ड सही भरें।' });
+    }
+    if (h === 0 && m === 0) {
+      return res.status(400).json({ error: 'कृपया घंटा या मिनट भरें।' });
+    }
+    if (m >= 60) {
+      return res.status(400).json({ error: 'मिनट 60 से कम होना चाहिए।' });
+    }
+
+    const cost = Math.round(((h * 60 + m) / 60) * r * 100) / 100;
+    const entry = await Entry.findByIdAndUpdate(
+      req.params.id,
+      { date, crop, hours: h, minutes: m, rate: r, cost },
+      { new: true }
+    );
+    if (!entry) {
+      return res.status(404).json({ error: 'एंट्री नहीं मिली।' });
+    }
+    res.json(entry);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ================= Payments =================
 router.get('/farmers/:id/payments', async (req, res) => {
   try {
@@ -178,6 +211,43 @@ router.get('/farmers/:id/summary', async (req, res) => {
       totalPaid: Math.round(totalPaid * 100) / 100,
       due: Math.round((totalCost - totalPaid) * 100) / 100
     });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ================= Dashboard =================
+// Sabhi farmers ka due status ek saath — sabse zyada due wale sabse upar.
+router.get('/dashboard', async (req, res) => {
+  try {
+    const farmers = await Farmer.find().sort({ createdAt: -1 });
+    const allEntries = await Entry.find();
+    const allPayments = await Payment.find();
+
+    const rows = farmers.map((f) => {
+      const entries = allEntries.filter((e) => String(e.farmerId) === String(f._id));
+      const payments = allPayments.filter((p) => String(p.farmerId) === String(f._id));
+      const totalCost = entries.reduce((s, e) => s + e.cost, 0);
+      const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+      const due = Math.round((totalCost - totalPaid) * 100) / 100;
+      return {
+        _id: f._id,
+        name: f.name,
+        phone: f.phone,
+        entryCount: entries.length,
+        totalCost: Math.round(totalCost * 100) / 100,
+        totalPaid: Math.round(totalPaid * 100) / 100,
+        due
+      };
+    });
+
+    rows.sort((a, b) => b.due - a.due);
+
+    const grandTotalDue = Math.round(rows.reduce((s, r) => s + r.due, 0) * 100) / 100;
+    const grandTotalCost = Math.round(rows.reduce((s, r) => s + r.totalCost, 0) * 100) / 100;
+    const grandTotalPaid = Math.round(rows.reduce((s, r) => s + r.totalPaid, 0) * 100) / 100;
+
+    res.json({ farmers: rows, grandTotalDue, grandTotalCost, grandTotalPaid });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

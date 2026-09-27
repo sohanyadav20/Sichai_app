@@ -203,6 +203,148 @@ td.empty {
   z-index: 100;
 }
 
+/* ================= View tabs (Farmers / Dashboard) ================= */
+.view-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.tab-btn {
+  flex: 1;
+  background: #eef3ee;
+  color: #333;
+  padding: 8px 6px;
+  font-size: 0.85rem;
+  border-radius: 6px;
+}
+
+.tab-btn.active {
+  background: #3e6b4f;
+  color: white;
+}
+
+.edit-btn {
+  background: #2f6fa8;
+  padding: 2px 8px;
+  margin-right: 4px;
+}
+
+.edit-btn:hover {
+  background: #285e8e;
+}
+
+.cancel-btn {
+  background: #888;
+  margin-left: 8px;
+}
+
+.row-actions {
+  white-space: nowrap;
+}
+
+/* ================= Dashboard ================= */
+.dashboard-totals {
+  display: flex;
+  gap: 14px;
+  margin: 14px 0 20px;
+  flex-wrap: wrap;
+}
+
+.dash-stat {
+  background: white;
+  border-radius: 8px;
+  padding: 14px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 140px;
+}
+
+.dash-label {
+  font-size: 0.8rem;
+  color: #777;
+}
+
+.dash-value {
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #2c5e3f;
+}
+
+.dash-stat.dash-due .dash-value {
+  color: #c0392b;
+}
+
+.dashboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dash-card {
+  background: white;
+  border-radius: 8px;
+  padding: 14px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  cursor: pointer;
+  border-left: 5px solid #ccc;
+  transition: transform 0.1s ease;
+}
+
+.dash-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
+}
+
+.dash-card.due-pos {
+  border-left-color: #c0392b;
+}
+
+.dash-card.due-clear {
+  border-left-color: #2c5e3f;
+}
+
+.dash-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dash-name {
+  font-weight: bold;
+  font-size: 1.05rem;
+}
+
+.dash-badge {
+  font-size: 0.85rem;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-weight: bold;
+}
+
+.dash-badge.badge-due {
+  background: #fde3e1;
+  color: #c0392b;
+}
+
+.dash-badge.badge-clear {
+  background: #e1f0e6;
+  color: #2c5e3f;
+}
+
+.dash-card-bottom {
+  display: flex;
+  gap: 16px;
+  margin-top: 8px;
+  font-size: 0.85rem;
+  color: #666;
+  flex-wrap: wrap;
+}
+
 .farmer-link {
   display: block;
   margin-top: 16px;
