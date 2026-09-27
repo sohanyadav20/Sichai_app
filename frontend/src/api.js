@@ -7,6 +7,16 @@ const baseURL = import.meta.env.DEV ? '/api' : 'https://sichai-app.onrender.com/
 
 const api = axios.create({ baseURL });
 
+// ---- Admin password ----
+export const adminLogin = (password) => api.post('/admin/login', { password }).then((r) => r.data);
+export const setAdminKey = (key) => {
+  if (key) {
+    api.defaults.headers.common['x-admin-key'] = key;
+  } else {
+    delete api.defaults.headers.common['x-admin-key'];
+  }
+};
+
 export const getFarmers = () => api.get('/farmers').then((r) => r.data);
 export const addFarmerApi = (name, phone) => api.post('/farmers', { name, phone }).then((r) => r.data);
 export const deleteFarmerApi = (id) => api.delete(`/farmers/${id}`);

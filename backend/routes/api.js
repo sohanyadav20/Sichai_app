@@ -4,6 +4,25 @@ const Farmer = require('../models/Farmer');
 const Entry = require('../models/Entry');
 const Payment = require('../models/Payment');
 
+// ---- Admin password check ----
+// Add/edit/delete karne wale routes ke liye zaroori — header me 'x-admin-key' bhejni hoti hai.
+function requireAdmin(req, res, next) {
+  const key = req.headers['x-admin-key'];
+  if (!key || key !== process.env.ADMIN_KEY) {
+    return res.status(401).json({ error: 'गलत एडमिन पासवर्ड।' });
+  }
+  next();
+}
+
+// ---- Login check (frontend password screen ke liye) ----
+router.post('/admin/login', (req, res) => {
+  const { password } = req.body;
+  if (password && password === process.env.ADMIN_KEY) {
+    return res.json({ ok: true });
+  }
+  res.status(401).json({ error: 'गलत पासवर्ड।' });
+});
+
 // ================= Farmers =================
 router.get('/farmers', async (req, res) => {
   try {
@@ -14,7 +33,7 @@ router.get('/farmers', async (req, res) => {
   }
 });
 
-router.post('/farmers', async (req, res) => {
+router.post('/farmers', requireAdmin, async (req, res) => {
   try {
     const { name, phone } = req.body;
     if (!name || !name.trim()) {
@@ -43,7 +62,7 @@ router.get('/farmers/by-phone/:phone', async (req, res) => {
   }
 });
 
-router.delete('/farmers/:id', async (req, res) => {
+router.delete('/farmers/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await Farmer.findByIdAndDelete(id);
@@ -68,7 +87,7 @@ router.get('/farmers/:id/entries', async (req, res) => {
   }
 });
 
-router.post('/farmers/:id/entries', async (req, res) => {
+router.post('/farmers/:id/entries', requireAdmin, async (req, res) => {
   try {
     const { date, crop, hours, minutes, rate } = req.body;
     const h = Number(hours) || 0;
@@ -101,7 +120,7 @@ router.post('/farmers/:id/entries', async (req, res) => {
   }
 });
 
-router.delete('/entries/:id', async (req, res) => {
+router.delete('/entries/:id', requireAdmin, async (req, res) => {
   try {
     await Entry.findByIdAndDelete(req.params.id);
     res.json({ success: true });
@@ -123,7 +142,7 @@ router.get('/farmers/:id/payments', async (req, res) => {
   }
 });
 
-router.post('/farmers/:id/payments', async (req, res) => {
+router.post('/farmers/:id/payments', requireAdmin, async (req, res) => {
   try {
     const { amount } = req.body;
     const a = Number(amount);
@@ -138,7 +157,7 @@ router.post('/farmers/:id/payments', async (req, res) => {
   }
 });
 
-router.delete('/payments/:id', async (req, res) => {
+router.delete('/payments/:id', requireAdmin, async (req, res) => {
   try {
     await Payment.findByIdAndDelete(req.params.id);
     res.json({ success: true });
