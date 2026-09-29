@@ -52,7 +52,7 @@ const NAV = [
 function buildWhatsAppLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+  const message = `नमस्ते ${name} जी, आपका सिंचाई का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
@@ -855,7 +855,8 @@ function AdminApp({ auth, onLogout }) {
 
               {/* Print hone par yeh title dikhega (screen par nahi) */}
               <div className="print-only-header">
-                <h1>सिंचाई पंप रजिस्टर</h1>
+                <h1>सिंचाई विवरण</h1>
+                <h1>Irrigation Details</h1>
                 <h2>{activeFarmer.name}</h2>
                 {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                 <p>तारीख: {todayStr()}</p>
