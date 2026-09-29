@@ -14,9 +14,16 @@ import {
   getSummary,
   getFarmerByPhone,
   adminLogin,
-  setAdminKey,
+  setAuthToken,
+  AUTH_KEY,
   getDashboard,
+  getRates,
 } from "./api";
+import { todayStr, rateForDate } from "./utils";
+import RatesView from "./views/RatesView";
+import ReportsView from "./views/ReportsView";
+import BackupView from "./views/BackupView";
+import UsersView from "./views/UsersView";
 
 const CROPS = [
   "गेहूं",
@@ -31,15 +38,21 @@ const CROPS = [
   "अन्य",
 ];
 
-function todayStr() {
-  return new Date().toISOString().slice(0, 10);
-}
+// Upar wali navigation (admin panel ke tabs)
+const NAV = [
+  { key: "farmers", label: "👥 किसान" },
+  { key: "dashboard", label: "📊 डैशबोर्ड" },
+  { key: "reports", label: "📈 रिपोर्ट" },
+  { key: "rates", label: "💰 रेट" },
+  { key: "backup", label: "🗄️ बैकअप" },
+  { key: "users", label: "👤 यूज़र" },
+];
 
 // Farmer ke phone number se WhatsApp reminder link banao (Indian number assume kiya)
 function buildWhatsAppLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `नमस्ते ${name} जी, आपका सिंचाई का बकाया ₹${due.toFixed(
+  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
@@ -196,18 +209,23 @@ export default function App() {
   return <AdminGate />;
 }
 
-// ================= Admin password gate =================
-// Jab tak sahi password na de, AdminApp bilkul nahi dikhega.
-// Password sirf is browser tab ki session tak yaad rehta hai (band karke khologe to phir maangega).
+// ================= Admin login gate =================
+// Sahi login ke bina AdminApp bilkul nahi dikhega.
+// Login sirf is browser tab ki session tak yaad rehta hai (band karke khologe to phir maangega).
 function AdminGate() {
-  const [unlocked, setUnlocked] = useState(() => {
-    const saved = sessionStorage.getItem("adminKey");
-    if (saved) {
-      setAdminKey(saved);
-      return true;
+  const [auth, setAuth] = useState(() => {
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(AUTH_KEY) || "null");
+      if (saved && saved.token) {
+        setAuthToken(saved.token);
+        return saved;
+      }
+    } catch (e) {
+      /* ignore */
     }
-    return false;
+    return null;
   });
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -220,27 +238,49 @@ function AdminGate() {
     }
     setLoading(true);
     try {
-      await adminLogin(password.trim());
-      sessionStorage.setItem("adminKey", password.trim());
-      setAdminKey(password.trim());
-      setUnlocked(true);
+      const data = await adminLogin(username.trim(), password);
+      const saved = {
+        token: data.token,
+        username: data.username,
+        role: data.role,
+      };
+      sessionStorage.setItem(AUTH_KEY, JSON.stringify(saved));
+      setAuthToken(saved.token);
+      setPassword("");
+      setAuth(saved);
     } catch (err) {
-      setError("गलत पासवर्ड।");
+      setError(
+        err.response?.data?.error || "लॉगिन नहीं हो पाया। दोबारा कोशिश करें।",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  if (unlocked) {
-    return <AdminApp />;
+  const handleLogout = () => {
+    sessionStorage.removeItem(AUTH_KEY);
+    setAuthToken(null);
+    setAuth(null);
+  };
+
+  if (auth) {
+    return <AdminApp auth={auth} onLogout={handleLogout} />;
   }
 
   return (
     <div className="farmer-view">
       <div className="farmer-view-box">
         <h1>सिंचाई पंप रजिस्टर</h1>
-        <p>एडमिन पैनल — पासवर्ड डालें</p>
+        <p>एडमिन पैनल — लॉगिन करें</p>
         <div className="farmer-view-search">
+          <input
+            type="text"
+            placeholder="यूज़रनेम (मालिक के लिए खाली छोड़ें)"
+            value={username}
+            autoCapitalize="none"
+            onChange={(e) => setUsername(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          />
           <input
             type="password"
             placeholder="पासवर्ड"
@@ -258,8 +298,8 @@ function AdminGate() {
   );
 }
 
-function AdminApp() {
-  const [view, setView] = useState("farmers"); // 'farmers' | 'dashboard'
+function AdminApp({ auth, onLogout }) {
+  const [view, setView] = useState("farmers"); // farmers | dashboard | reports | rates | backup | users
   const [farmers, setFarmers] = useState([]);
   const [activeFarmer, setActiveFarmer] = useState(null);
   const [newFarmerName, setNewFarmerName] = useState("");
@@ -294,6 +334,11 @@ function AdminApp() {
 
   const [dashboard, setDashboard] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
+  const [dashSearch, setDashSearch] = useState("");
+  const [dashOnlyDue, setDashOnlyDue] = useState(false);
+
+  const [rates, setRates] = useState([]);
+  const [rateManual, setRateManual] = useState(false); // user ne rate haath se badla to auto-fill band
 
   const showMessage = (msg) => {
     setMessage(msg);
@@ -334,9 +379,25 @@ function AdminApp() {
     setSummary(s);
   }, []);
 
+  const loadRates = useCallback(async () => {
+    try {
+      setRates(await getRates());
+    } catch (err) {
+      /* rate na mile to default 60 chalega */
+    }
+  }, []);
+
   useEffect(() => {
     loadFarmers();
-  }, [loadFarmers]);
+    loadRates();
+  }, [loadFarmers, loadRates]);
+
+  // Nayi entry me tareekh ke hisaab se rate apne-aap bharo (rate history se)
+  useEffect(() => {
+    if (editingEntryId || rateManual) return;
+    const auto = rateForDate(rates, entryForm.date);
+    setEntryForm((f) => (Number(f.rate) === auto ? f : { ...f, rate: auto }));
+  }, [rates, entryForm.date, editingEntryId, rateManual]);
 
   useEffect(() => {
     loadFarmerData(activeFarmer?._id);
@@ -476,9 +537,10 @@ function AdminApp() {
         crop: CROPS[0],
         hours: 0,
         minutes: 0,
-        rate: 60,
+        rate: rateForDate(rates, todayStr()),
       });
       setEditingEntryId(null);
+      setRateManual(false);
       await loadFarmerData(activeFarmer._id);
     } catch (err) {
       showMessage(err.response?.data?.error || "त्रुटि हुई।");
@@ -498,12 +560,13 @@ function AdminApp() {
 
   const handleCancelEditEntry = () => {
     setEditingEntryId(null);
+    setRateManual(false);
     setEntryForm({
       date: todayStr(),
       crop: CROPS[0],
       hours: 0,
       minutes: 0,
-      rate: 60,
+      rate: rateForDate(rates, todayStr()),
     });
   };
 
@@ -533,123 +596,158 @@ function AdminApp() {
     await loadFarmerData(activeFarmer._id);
   };
 
+  // ---- Dashboard search / filter ----
+  const dashQuery = dashSearch.trim().toLowerCase();
+  const visibleDashFarmers = dashboard
+    ? dashboard.farmers.filter((f) => {
+        if (dashOnlyDue && !(f.due > 0)) return false;
+        if (!dashQuery) return true;
+        return (
+          (f.name || "").toLowerCase().includes(dashQuery) ||
+          (f.phone || "")
+            .replace(/\s/g, "")
+            .includes(dashQuery.replace(/\s/g, ""))
+        );
+      })
+    : [];
+
   return (
     <div className="app">
       <header className="app-header no-print">
-        <h1>सिंचाई पंप रजिस्टर</h1>
+        <div className="app-header-top">
+          <h1>सिंचाई पंप रजिस्टर</h1>
+          <div className="header-user">
+            <span>
+              👤 {auth.username}
+              {auth.role === "owner" ? " (मालिक)" : ""}
+            </span>
+            <button className="logout-btn" onClick={onLogout}>
+              लॉगआउट
+            </button>
+          </div>
+        </div>
+        <nav className="main-nav">
+          {NAV.map((n) => (
+            <button
+              key={n.key}
+              className={view === n.key ? "nav-btn active" : "nav-btn"}
+              onClick={() => setView(n.key)}
+            >
+              {n.label}
+            </button>
+          ))}
+        </nav>
       </header>
 
       {message && <div className="toast no-print">{message}</div>}
 
       <div className="main-layout">
-        {/* Left: Farmer list */}
-        <aside className="sidebar no-print">
-          <div className="view-tabs">
-            <button
-              className={view === "farmers" ? "tab-btn active" : "tab-btn"}
-              onClick={() => setView("farmers")}
+        {/* Left: Farmer list (sirf "किसान" tab me) */}
+        {view === "farmers" && (
+          <aside className="sidebar no-print">
+            <h2>किसान सूची</h2>
+            <div
+              className="add-row"
+              style={{ flexDirection: "column", gap: "6px" }}
             >
-              किसान सूची
-            </button>
-            <button
-              className={view === "dashboard" ? "tab-btn active" : "tab-btn"}
-              onClick={() => setView("dashboard")}
-            >
-              📊 डैशबोर्ड
-            </button>
-          </div>
-          <h2>किसान सूची</h2>
-          <div
-            className="add-row"
-            style={{ flexDirection: "column", gap: "6px" }}
-          >
-            <input
-              type="text"
-              placeholder="नया किसान नाम"
-              value={newFarmerName}
-              onChange={(e) => setNewFarmerName(e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="मोबाइल नंबर"
-              value={newFarmerPhone}
-              onChange={(e) => setNewFarmerPhone(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleAddFarmer()}
-            />
-            <button onClick={handleAddFarmer}>+ जोड़ें</button>
-          </div>
+              <input
+                type="text"
+                placeholder="नया किसान नाम"
+                value={newFarmerName}
+                onChange={(e) => setNewFarmerName(e.target.value)}
+              />
+              <input
+                type="tel"
+                placeholder="मोबाइल नंबर"
+                value={newFarmerPhone}
+                onChange={(e) => setNewFarmerPhone(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddFarmer()}
+              />
+              <button onClick={handleAddFarmer}>+ जोड़ें</button>
+            </div>
 
-          <a
-            className="farmer-link"
-            href="?view=farmer"
-            target="_blank"
-            rel="noreferrer"
-          >
-            🔗 किसान के लिए लिंक (रिकॉर्ड देखें)
-          </a>
-          <ul className="farmer-list">
-            {farmers.map((f) =>
-              editingFarmerId === f._id ? (
-                <li key={f._id} className="farmer-edit-row">
-                  <input
-                    type="text"
-                    value={farmerEditName}
-                    onChange={(e) => setFarmerEditName(e.target.value)}
-                    placeholder="नाम"
-                  />
-                  <input
-                    type="tel"
-                    value={farmerEditPhone}
-                    onChange={(e) => setFarmerEditPhone(e.target.value)}
-                    placeholder="मोबाइल नंबर"
-                  />
-                  <div className="farmer-edit-actions">
-                    <button onClick={handleSaveFarmerEdit}>सेव करें</button>
-                    <button
-                      className="cancel-btn"
-                      onClick={handleCancelEditFarmer}
-                    >
-                      रद्द करें
-                    </button>
-                  </div>
-                </li>
-              ) : (
-                <li
-                  key={f._id}
-                  className={activeFarmer?._id === f._id ? "active" : ""}
-                  onClick={() => setActiveFarmer(f)}
-                >
-                  <span>{f.name}</span>
-                  <span className="farmer-row-actions">
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEditFarmer(f);
-                      }}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFarmer(f);
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                </li>
-              ),
-            )}
-            {farmers.length === 0 && <li className="empty">कोई किसान नहीं</li>}
-          </ul>
-        </aside>
+            <a
+              className="farmer-link"
+              href="?view=farmer"
+              target="_blank"
+              rel="noreferrer"
+            >
+              🔗 किसान के लिए लिंक (रिकॉर्ड देखें)
+            </a>
+            <ul className="farmer-list">
+              {farmers.map((f) =>
+                editingFarmerId === f._id ? (
+                  <li key={f._id} className="farmer-edit-row">
+                    <input
+                      type="text"
+                      value={farmerEditName}
+                      onChange={(e) => setFarmerEditName(e.target.value)}
+                      placeholder="नाम"
+                    />
+                    <input
+                      type="tel"
+                      value={farmerEditPhone}
+                      onChange={(e) => setFarmerEditPhone(e.target.value)}
+                      placeholder="मोबाइल नंबर"
+                    />
+                    <div className="farmer-edit-actions">
+                      <button onClick={handleSaveFarmerEdit}>सेव करें</button>
+                      <button
+                        className="cancel-btn"
+                        onClick={handleCancelEditFarmer}
+                      >
+                        रद्द करें
+                      </button>
+                    </div>
+                  </li>
+                ) : (
+                  <li
+                    key={f._id}
+                    className={activeFarmer?._id === f._id ? "active" : ""}
+                    onClick={() => setActiveFarmer(f)}
+                  >
+                    <span>{f.name}</span>
+                    <span className="farmer-row-actions">
+                      <button
+                        className="edit-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartEditFarmer(f);
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFarmer(f);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  </li>
+                ),
+              )}
+              {farmers.length === 0 && (
+                <li className="empty">कोई किसान नहीं</li>
+              )}
+            </ul>
+          </aside>
+        )}
 
         {/* Right: Entry + Payment */}
         <main className="content">
-          {view === "dashboard" ? (
+          {view === "reports" ? (
+            <ReportsView />
+          ) : view === "rates" ? (
+            <RatesView rates={rates} onChanged={loadRates} />
+          ) : view === "backup" ? (
+            <BackupView />
+          ) : view === "users" ? (
+            <UsersView auth={auth} />
+          ) : view === "dashboard" ? (
             <div className="dashboard">
               <h2>📊 डैशबोर्ड — सबका बकाया एक नज़र में</h2>
               {dashboardLoading && <p>लोड हो रहा है...</p>}
@@ -676,8 +774,30 @@ function AdminApp() {
                     </div>
                   </div>
 
+                  <div className="dash-toolbar">
+                    <input
+                      type="search"
+                      className="dash-search"
+                      placeholder="🔍 किसान का नाम या मोबाइल नंबर खोजें"
+                      value={dashSearch}
+                      onChange={(e) => setDashSearch(e.target.value)}
+                    />
+                    <label className="dash-check">
+                      <input
+                        type="checkbox"
+                        checked={dashOnlyDue}
+                        onChange={(e) => setDashOnlyDue(e.target.checked)}
+                      />
+                      सिर्फ बकाया वाले
+                    </label>
+                    <span className="dash-count">
+                      {visibleDashFarmers.length} / {dashboard.farmers.length}{" "}
+                      किसान
+                    </span>
+                  </div>
+
                   <div className="dashboard-list">
-                    {dashboard.farmers.map((f) => (
+                    {visibleDashFarmers.map((f) => (
                       <div
                         key={f._id}
                         className={`dash-card ${f.due > 0 ? "due-pos" : "due-clear"}`}
@@ -711,8 +831,12 @@ function AdminApp() {
                         </div>
                       </div>
                     ))}
-                    {dashboard.farmers.length === 0 && (
-                      <p className="empty">अभी कोई किसान नहीं है।</p>
+                    {visibleDashFarmers.length === 0 && (
+                      <p className="empty">
+                        {dashboard.farmers.length === 0
+                          ? "अभी कोई किसान नहीं है।"
+                          : "कोई किसान नहीं मिला।"}
+                      </p>
                     )}
                   </div>
                 </>
@@ -796,9 +920,10 @@ function AdminApp() {
                       type="number"
                       min="0"
                       value={entryForm.rate}
-                      onChange={(e) =>
-                        setEntryForm((f) => ({ ...f, rate: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        setRateManual(true);
+                        setEntryForm((f) => ({ ...f, rate: e.target.value }));
+                      }}
                     />
                   </label>
                 </div>
