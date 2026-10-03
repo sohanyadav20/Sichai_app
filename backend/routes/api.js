@@ -231,7 +231,7 @@ router.get('/farmers/:id/entries', async (req, res) => {
 });
 
 function parseEntryBody(body) {
-  const { date, crop, hours, minutes, rate } = body;
+  const { date, crop, hours, minutes, rate, place } = body;
   const h = Number(hours) || 0;
   const m = Number(minutes) || 0;
   const r = Number(rate);
@@ -241,7 +241,7 @@ function parseEntryBody(body) {
   if (m >= 60) return { error: 'मिनट 60 से कम होना चाहिए।' };
 
   const cost = round2(((h * 60 + m) / 60) * r);
-  return { data: { date, crop, hours: h, minutes: m, rate: r, cost } };
+  return { data: { date, crop, place: String(place || '').trim(), hours: h, minutes: m, rate: r, cost } };
 }
 
 router.post('/farmers/:id/entries', requireAdmin, async (req, res) => {
@@ -513,10 +513,22 @@ router.get('/export/entries.csv', requireAdmin, async (req, res) => {
       Entry.find().sort({ date: 1, createdAt: 1 })
     ]);
     const byId = Object.fromEntries(farmers.map((f) => [String(f._id), f]));
-    const rows = [['किसान', 'मोबाइल', 'तारीख', 'फसल', 'घंटे', 'मिनट', 'रेट (₹/घंटा)', 'राशि (₹)']];
+    const rows = [
+      ['किसान', 'मोबाइल', 'तारीख', 'फसल', 'जगह/खेत', 'घंटे', 'मिनट', 'रेट (₹/घंटा)', 'राशि (₹)']
+    ];
     entries.forEach((e) => {
       const f = byId[String(e.farmerId)];
-      rows.push([f ? f.name : '(हटाया गया)', f ? f.phone : '', e.date, e.crop, e.hours, e.minutes, e.rate, e.cost]);
+      rows.push([
+        f ? f.name : '(हटाया गया)',
+        f ? f.phone : '',
+        e.date,
+        e.crop,
+        e.place || '',
+        e.hours,
+        e.minutes,
+        e.rate,
+        e.cost
+      ]);
     });
     sendCsv(res, 'sichai-entries.csv', rows);
   } catch (err) {
