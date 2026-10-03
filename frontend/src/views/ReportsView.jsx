@@ -19,7 +19,7 @@ const niceMax = (v) => {
   return step * pow;
 };
 
-function MonthlyChart({ months }) {
+function MonthlyChart({ months, dark }) {
   const W = 760;
   const H = 300;
   const left = 46;
@@ -28,6 +28,13 @@ function MonthlyChart({ months }) {
   const bottom = 34;
   const plotW = W - left - right;
   const plotH = H - top - bottom;
+
+  // Dark background par halki grid/text thodi chamkeeli honi chahiye, warna dikhegi nahi
+  const gridColor = dark ? '#3a4138' : '#e3e8e3';
+  const labelColor = dark ? '#aab3ac' : '#777';
+  const monthColor = dark ? '#c7cdc6' : '#555';
+  const costColor = dark ? '#5fae7c' : '#3e6b4f';
+  const paidColor = dark ? '#5a9bd8' : '#2f6fa8';
 
   const maxVal = niceMax(Math.max(0, ...months.map((m) => Math.max(m.totalCost, m.totalPaid))));
   const groupW = plotW / 12;
@@ -40,8 +47,8 @@ function MonthlyChart({ months }) {
       <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" role="img" aria-label="महीने-वार सिंचाई और जमा">
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={left} x2={W - right} y1={y(t)} y2={y(t)} stroke="#e3e8e3" />
-            <text x={left - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill="#777">
+            <line x1={left} x2={W - right} y1={y(t)} y2={y(t)} stroke={gridColor} />
+            <text x={left - 6} y={y(t) + 4} textAnchor="end" fontSize="11" fill={labelColor}>
               {short(t)}
             </text>
           </g>
@@ -55,7 +62,7 @@ function MonthlyChart({ months }) {
                 y={y(m.totalCost)}
                 width={barW}
                 height={top + plotH - y(m.totalCost)}
-                fill="#3e6b4f"
+                fill={costColor}
                 rx="2"
               >
                 <title>{`${MONTHS[i]}: सिंचाई ${money(m.totalCost)}`}</title>
@@ -65,12 +72,12 @@ function MonthlyChart({ months }) {
                 y={y(m.totalPaid)}
                 width={barW}
                 height={top + plotH - y(m.totalPaid)}
-                fill="#2f6fa8"
+                fill={paidColor}
                 rx="2"
               >
                 <title>{`${MONTHS[i]}: जमा ${money(m.totalPaid)}`}</title>
               </rect>
-              <text x={gx} y={H - 12} textAnchor="middle" fontSize="11" fill="#555">
+              <text x={gx} y={H - 12} textAnchor="middle" fontSize="11" fill={monthColor}>
                 {MONTHS[i]}
               </text>
             </g>
@@ -81,7 +88,8 @@ function MonthlyChart({ months }) {
   );
 }
 
-export default function ReportsView() {
+export default function ReportsView({ theme }) {
+  const dark = theme === 'dark';
   const [data, setData] = useState(null);
   const [year, setYear] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,7 +171,7 @@ export default function ReportsView() {
             <i style={{ background: '#2f6fa8' }} /> जमा (₹)
           </span>
         </div>
-        <MonthlyChart months={data.months} />
+        <MonthlyChart months={data.months} dark={dark} />
       </div>
 
       <div className="card">
