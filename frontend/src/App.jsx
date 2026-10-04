@@ -62,6 +62,23 @@ function buildWhatsAppLink(phone, name, due) {
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
 }
 
+// Farmer ke phone number se SMS reminder link banao — click karते hi phone ka
+// default Messages app khul jayega, number aur message pehle se bhara hua.
+function buildSmsLink(phone, name, due) {
+  const digits = (phone || "").replace(/\D/g, "");
+  const withCountryCode =
+    digits.length === 10 ? `+91${digits}` : digits ? `+${digits}` : "";
+  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+    2,
+  )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
+  // iPhone aur Android me "body=" ke pehle alag symbol chahiye hota hai
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  const sep = isIOS ? "&" : "?";
+  return `sms:${withCountryCode}${sep}body=${encodeURIComponent(message)}`;
+}
+
 const THEME_KEY = "sichai-theme";
 
 // Dark/light theme — poore app (admin aur kisan वाला page) में इस्तेमाल होता है।
@@ -923,6 +940,15 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                               📲 रिमाइंडर
                             </a>
                           )}
+                          {f.due > 0 && f.phone && (
+                            <a
+                              className="dash-sms"
+                              href={buildSmsLink(f.phone, f.name, f.due)}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              💬 SMS
+                            </a>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -950,8 +976,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
               {/* Print hone par yeh title dikhega (screen par nahi) */}
               <div className="print-only-header">
-                <h1>सिंचाई विवरण</h1>
-                <h1>Irrigation Details</h1>
+                <h1>सिंचाई पंप रजिस्टर</h1>
                 <h2>{activeFarmer.name}</h2>
                 {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                 <p>तारीख: {todayStr()}</p>
@@ -1224,18 +1249,30 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                   ₹{summary.due.toFixed(2)}
                 </div>
                 {summary.due > 0 && activeFarmer.phone && (
-                  <a
-                    className="whatsapp-btn"
-                    href={buildWhatsAppLink(
-                      activeFarmer.phone,
-                      activeFarmer.name,
-                      summary.due,
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    📲 WhatsApp रिमाइंडर भेजें
-                  </a>
+                  <div className="reminder-btns">
+                    <a
+                      className="whatsapp-btn"
+                      href={buildWhatsAppLink(
+                        activeFarmer.phone,
+                        activeFarmer.name,
+                        summary.due,
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      📲 WhatsApp रिमाइंडर भेजें
+                    </a>
+                    <a
+                      className="sms-btn"
+                      href={buildSmsLink(
+                        activeFarmer.phone,
+                        activeFarmer.name,
+                        summary.due,
+                      )}
+                    >
+                      💬 SMS भेजें
+                    </a>
+                  </div>
                 )}
               </div>
               <div className="summary-bar print-only-summary">

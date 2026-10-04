@@ -544,6 +544,43 @@ td.empty {
   background: #1fb855;
 }
 
+.reminder-btns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sms-btn {
+  display: inline-block;
+  background: #2f6fa8;
+  color: white;
+  padding: 10px 16px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.sms-btn:hover {
+  background: #285e8e;
+}
+
+.dash-sms {
+  display: inline-block;
+  background: #2f6fa8;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-size: 0.78rem;
+  font-weight: bold;
+}
+
+.dash-sms:hover {
+  background: #285e8e;
+}
+
 .print-only-summary {
   display: none;
 }
