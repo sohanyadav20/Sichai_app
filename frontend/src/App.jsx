@@ -950,7 +950,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
               {/* Print hone par yeh title dikhega (screen par nahi) */}
               <div className="print-only-header">
-                <h1>सिंचाई सिचाई विवरण</h1>
+                <h1>सिंचाई विवरण</h1>
                 <h1>Irrigation Details</h1>
                 <h2>{activeFarmer.name}</h2>
                 {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
