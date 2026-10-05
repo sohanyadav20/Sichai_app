@@ -30,12 +30,11 @@ const CROPS = [
   "धान",
   "बेहन",
   "गन्ना",
-  "चरी",
-  "सरसो",
   "प्याज",
-  "आलु",
   "लहसुन",
   "घास",
+  "चरी",
+  "सरसो",
   "पलेवा",
   "पिछला",
   "सब्जी",
@@ -56,7 +55,7 @@ const NAV = [
 function buildWhatsAppLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `नमस्ते ${name} जी, आपका सिंचाई का बकाया ₹${due.toFixed(
+  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
@@ -68,7 +67,7 @@ function buildSmsLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode =
     digits.length === 10 ? `+91${digits}` : digits ? `+${digits}` : "";
-  const message = `नमस्ते ${name} जी, आपका सिंचाई का बकाया ₹${due.toFixed(
+  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   // iPhone aur Android me "body=" ke pehle alag symbol chahiye hota hai
@@ -279,8 +278,8 @@ function FarmerRecordView({ theme, toggleTheme }) {
           </table>
 
           <div className="summary-bar">
-            Total Sichai: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; Total
-            Paid: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; Due: ₹
+            कुल सिंचाई: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; कुल जमा: ₹
+            {summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; बकाया: ₹
             {summary.due.toFixed(2)}
           </div>
         </div>
@@ -1245,9 +1244,9 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
               <div className="summary-bar-row no-print">
                 <div className="summary-bar">
-                  Total Sichai: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp;
-                  Total Paid: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; Due:
-                  ₹{summary.due.toFixed(2)}
+                  कुल सिंचाई: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; कुल
+                  जमा: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; बकाया: ₹
+                  {summary.due.toFixed(2)}
                 </div>
                 {summary.due > 0 && activeFarmer.phone && (
                   <div className="reminder-btns">
@@ -1277,8 +1276,8 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                 )}
               </div>
               <div className="summary-bar print-only-summary">
-                Total Sichai: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp;
-                Total Paid: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; Due: ₹
+                कुल सिंचाई: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; कुल
+                जमा: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; बकाया: ₹
                 {summary.due.toFixed(2)}
               </div>
             </>
