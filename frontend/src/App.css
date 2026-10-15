@@ -581,16 +581,6 @@ td.empty {
   background: #285e8e;
 }
 
-.print-only-summary {
-  display: none;
-}
-
-@media print {
-  .print-only-summary {
-    display: block;
-  }
-}
-
 /* ================= Farmer self-service page (?view=farmer) ================= */
 .farmer-view {
   max-width: 600px;
@@ -664,6 +654,51 @@ td.empty {
   gap: 10px;
 }
 
+.print-btn-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.secondary-print {
+  background: #2f6fa8;
+}
+
+.secondary-print:hover {
+  background: #285e8e;
+}
+
+.range-print-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--card-bg);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 18px;
+  box-shadow: 0 1px 3px var(--shadow);
+}
+
+.range-print-row label {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  gap: 4px;
+}
+
+.range-print-row input[type='date'] {
+  padding: 7px 10px;
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+}
+
+/* Print-only report (पूरा / तारीख से तारीख तक) — screen par kabhi nahi dikhta, sirf print me */
+.print-report {
+  display: none;
+}
+
 .print-only-header {
   display: none;
 }
@@ -703,6 +738,17 @@ td.empty {
   .farmer-view-report {
     box-shadow: none;
     padding: 0;
+  }
+  .print-report {
+    display: block;
+  }
+  .print-report h3 {
+    margin-top: 22px;
+    margin-bottom: 8px;
+  }
+  .print-report .summary-bar {
+    margin-top: 16px;
+    font-size: 1rem;
   }
 }
 

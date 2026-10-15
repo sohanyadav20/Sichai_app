@@ -30,14 +30,15 @@ const CROPS = [
   "धान",
   "बेहन",
   "गन्ना",
-  "प्याज",
-  "लहसुन",
-  "घास",
   "चरी",
   "सरसो",
   "पलेवा",
   "पिछला",
   "सब्जी",
+  "आलु",
+  "घास",
+  "लहसुन",
+  "प्याज",
   "अन्य",
 ];
 
@@ -55,7 +56,7 @@ const NAV = [
 function buildWhatsAppLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+  const message = `${name}, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
@@ -67,7 +68,7 @@ function buildSmsLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode =
     digits.length === 10 ? `+91${digits}` : digits ? `+${digits}` : "";
-  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+  const message = `${name}, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   // iPhone aur Android me "body=" ke pehle alag symbol chahiye hota hai
@@ -435,6 +436,12 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
 
+  // ---- Print: "पूरा" aur "तारीख से तारीख तक" dono alag-alag, on-screen filter se bilkul alag ----
+  const [printMode, setPrintMode] = useState(null); // null | 'full' | 'range'
+  const [showRangePrint, setShowRangePrint] = useState(false);
+  const [printRangeFrom, setPrintRangeFrom] = useState("");
+  const [printRangeTo, setPrintRangeTo] = useState("");
+
   const [dashboard, setDashboard] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
   const [dashSearch, setDashSearch] = useState("");
@@ -511,6 +518,46 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
       loadDashboard();
     }
   }, [view, loadDashboard]);
+
+  // printMode set hote hi (render ke baad) print dialog kholo
+  useEffect(() => {
+    if (!printMode) return;
+    const t = setTimeout(() => window.print(), 60);
+    return () => clearTimeout(t);
+  }, [printMode]);
+
+  // Print dialog band hote hi (chhapo ya cancel karo) print-wala block hata do
+  useEffect(() => {
+    const handler = () => setPrintMode(null);
+    window.addEventListener("afterprint", handler);
+    return () => window.removeEventListener("afterprint", handler);
+  }, []);
+
+  const handlePrintRangeClick = () => {
+    if (!printRangeFrom || !printRangeTo) {
+      showMessage("पहले दोनों तारीख चुनें।");
+      return;
+    }
+    if (printRangeFrom > printRangeTo) {
+      showMessage("पहली तारीख दूसरी तारीख से पहले या बराबर होनी चाहिए।");
+      return;
+    }
+    setPrintMode("range");
+  };
+
+  const rangeEntries = entries.filter(
+    (e) => e.date >= printRangeFrom && e.date <= printRangeTo,
+  );
+  const rangePayments = payments.filter(
+    (p) => p.date >= printRangeFrom && p.date <= printRangeTo,
+  );
+  const rangeTotalCost = rangeEntries.reduce((s, e) => s + e.cost, 0);
+  const rangeTotalHours = rangeEntries.reduce(
+    (s, e) => s + e.hours + e.minutes / 60,
+    0,
+  );
+  const rangeTotalPaid = rangePayments.reduce((s, p) => s + p.amount, 0);
+  const rangeDue = rangeTotalCost - rangeTotalPaid;
 
   const openFarmerFromDashboard = (farmerId) => {
     const f = farmers.find((x) => x._id === farmerId);
@@ -968,19 +1015,237 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
             <>
               <div className="farmer-header no-print">
                 <h2>{activeFarmer.name} — सिंचाई एंट्री</h2>
-                <button className="print-btn" onClick={() => window.print()}>
-                  🖨️ पूरा रिकॉर्ड प्रिंट करें
-                </button>
+                <div className="print-btn-group">
+                  <button
+                    className="print-btn"
+                    onClick={() => setPrintMode("full")}
+                  >
+                    🖨️ पूरा प्रिंट करें
+                  </button>
+                  <button
+                    className="print-btn secondary-print"
+                    onClick={() => setShowRangePrint((v) => !v)}
+                  >
+                    📅 तारीख से तारीख तक प्रिंट करें
+                  </button>
+                </div>
               </div>
 
-              {/* Print hone par yeh title dikhega (screen par nahi) */}
-              <div className="print-only-header">
-                <h1>सिंचाई विवरण</h1>
-                <h1>Irrigation Details</h1>
-                <h2>{activeFarmer.name}</h2>
-                {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
-                <p>तारीख: {todayStr()}</p>
-              </div>
+              {showRangePrint && (
+                <div className="range-print-row no-print">
+                  <label>
+                    से
+                    <input
+                      type="date"
+                      value={printRangeFrom}
+                      onChange={(e) => setPrintRangeFrom(e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    तक
+                    <input
+                      type="date"
+                      value={printRangeTo}
+                      onChange={(e) => setPrintRangeTo(e.target.value)}
+                    />
+                  </label>
+                  <button className="primary" onClick={handlePrintRangeClick}>
+                    प्रिंट करें
+                  </button>
+                </div>
+              )}
+
+              {/* पूरा रिकॉर्ड — hamesha SAARI entries + SAARE payments, kisi bhi on-screen filter se asar nahi */}
+              {printMode === "full" && (
+                <div className="print-report">
+                  <div className="print-only-header">
+                    <h1>सिंचाई विवरण</h1>
+                    <h1>Irrigation Details</h1>
+                    <h2>{activeFarmer.name}</h2>
+                    {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
+                    <p>
+                      रिपोर्ट: पूरा रिकॉर्ड &nbsp;|&nbsp; तारीख: {todayStr()}
+                    </p>
+                  </div>
+
+                  <h3>सिंचाई रिकॉर्ड</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>तारीख</th>
+                        <th>फसल</th>
+                        <th>जगह</th>
+                        <th>घंटे</th>
+                        <th>मिनट</th>
+                        <th>रेट</th>
+                        <th>पैसा (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {entries.map((e) => (
+                        <tr key={e._id}>
+                          <td>{e.date}</td>
+                          <td>{e.crop}</td>
+                          <td>{e.place}</td>
+                          <td>{e.hours}</td>
+                          <td>{e.minutes}</td>
+                          <td>{e.rate}</td>
+                          <td>{e.cost.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      {entries.length === 0 && (
+                        <tr>
+                          <td colSpan="7" className="empty">
+                            कोई एंट्री नहीं
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                    {entries.length > 0 && (
+                      <tfoot>
+                        <tr className="total-row">
+                          <td colSpan="3">कुल ({entries.length} एंट्री)</td>
+                          <td colSpan="2">
+                            {entries
+                              .reduce((s, e) => s + e.hours + e.minutes / 60, 0)
+                              .toFixed(1)}{" "}
+                            घंटे
+                          </td>
+                          <td colSpan="2">₹{summary.totalCost.toFixed(2)}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+
+                  <h3>भुगतान</h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>तारीख</th>
+                        <th>जमा राशि (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((p) => (
+                        <tr key={p._id}>
+                          <td>{p.date}</td>
+                          <td>{p.amount.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      {payments.length === 0 && (
+                        <tr>
+                          <td colSpan="2" className="empty">
+                            कोई भुगतान नहीं
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+
+                  <div className="summary-bar">
+                    कुल सिंचाई: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp;
+                    कुल जमा: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp;
+                    बकाया: ₹{summary.due.toFixed(2)}
+                  </div>
+                </div>
+              )}
+
+              {/* तारीख से तारीख तक — sirf usi avadhi ki entries, aur usi beech me aaye hue payments */}
+              {printMode === "range" && (
+                <div className="print-report">
+                  <div className="print-only-header">
+                    <h1>सिंचाई विवरण</h1>
+                    <h1>Irrigation Details</h1>
+                    <h2>{activeFarmer.name}</h2>
+                    {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
+                    <p>
+                      अवधि: {printRangeFrom} से {printRangeTo} &nbsp;|&nbsp;
+                      तारीख: {todayStr()}
+                    </p>
+                  </div>
+
+                  <h3>
+                    सिंचाई रिकॉर्ड ({printRangeFrom} से {printRangeTo})
+                  </h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>तारीख</th>
+                        <th>फसल</th>
+                        <th>जगह</th>
+                        <th>घंटे</th>
+                        <th>मिनट</th>
+                        <th>रेट</th>
+                        <th>पैसा (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rangeEntries.map((e) => (
+                        <tr key={e._id}>
+                          <td>{e.date}</td>
+                          <td>{e.crop}</td>
+                          <td>{e.place}</td>
+                          <td>{e.hours}</td>
+                          <td>{e.minutes}</td>
+                          <td>{e.rate}</td>
+                          <td>{e.cost.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      {rangeEntries.length === 0 && (
+                        <tr>
+                          <td colSpan="7" className="empty">
+                            इस अवधि में कोई एंट्री नहीं
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                    {rangeEntries.length > 0 && (
+                      <tfoot>
+                        <tr className="total-row">
+                          <td colSpan="3">
+                            कुल ({rangeEntries.length} एंट्री)
+                          </td>
+                          <td colSpan="2">{rangeTotalHours.toFixed(1)} घंटे</td>
+                          <td colSpan="2">₹{rangeTotalCost.toFixed(2)}</td>
+                        </tr>
+                      </tfoot>
+                    )}
+                  </table>
+
+                  <h3>
+                    भुगतान ({printRangeFrom} से {printRangeTo})
+                  </h3>
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>तारीख</th>
+                        <th>जमा राशि (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rangePayments.map((p) => (
+                        <tr key={p._id}>
+                          <td>{p.date}</td>
+                          <td>{p.amount.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                      {rangePayments.length === 0 && (
+                        <tr>
+                          <td colSpan="2" className="empty">
+                            इस अवधि में कोई भुगतान नहीं
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+
+                  <div className="summary-bar">
+                    इस अवधि की सिंचाई: ₹{rangeTotalCost.toFixed(2)}{" "}
+                    &nbsp;|&nbsp; इस अवधि में जमा: ₹{rangeTotalPaid.toFixed(2)}{" "}
+                    &nbsp;|&nbsp; इस अवधि का बकाया: ₹{rangeDue.toFixed(2)}
+                  </div>
+                </div>
+              )}
 
               <div className="card no-print">
                 <h3>
@@ -1072,8 +1337,8 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                 )}
               </div>
 
-              <div className="card">
-                <h3>सिंचाई रिकॉर्ड</h3>
+              <div className="card no-print">
+                <h3>सिंचाई रिकॉर्ड (स्क्रीन व्यू)</h3>
                 <div className="date-filter-row no-print">
                   <button
                     className={
@@ -1196,7 +1461,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                 </table>
               </div>
 
-              <div className="card">
+              <div className="card no-print">
                 <h3>पैसा जमा (भुगतान)</h3>
                 <div className="add-row no-print">
                   <input
@@ -1274,11 +1539,6 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     </a>
                   </div>
                 )}
-              </div>
-              <div className="summary-bar print-only-summary">
-                कुल सिंचाई: ₹{summary.totalCost.toFixed(2)} &nbsp;|&nbsp; कुल
-                जमा: ₹{summary.totalPaid.toFixed(2)} &nbsp;|&nbsp; बकाया: ₹
-                {summary.due.toFixed(2)}
               </div>
             </>
           )}
