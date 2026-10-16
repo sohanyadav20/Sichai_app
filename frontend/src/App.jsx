@@ -1241,8 +1241,8 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
                   <div className="summary-bar">
                     इस अवधि की सिंचाई: ₹{rangeTotalCost.toFixed(2)}{" "}
-                    &nbsp;|&nbsp; इस अवधि में जमा: ₹{rangeTotalPaid.toFixed(2)}{" "}
-                    &nbsp;|&nbsp; इस अवधि का बकाया: ₹{rangeDue.toFixed(2)}
+                    &nbsp;|&nbsp; जमा: ₹{rangeTotalPaid.toFixed(2)}{" "}
+                    &nbsp;|&nbsp; बकाया: ₹{rangeDue.toFixed(2)}
                   </div>
                 </div>
               )}
@@ -1338,7 +1338,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               </div>
 
               <div className="card no-print">
-                <h3>सिंचाई रिकॉर्ड (स्क्रीन व्यू)</h3>
+                <h3>सिंचाई रिकॉर्ड</h3>
                 <div className="date-filter-row no-print">
                   <button
                     className={
