@@ -394,7 +394,7 @@ function AdminGate({ theme, toggleTheme }) {
 
         <div className="login-card-body">
           <label className="login-field">
-            यूज़रनेम
+            UserId
             <div className="input-with-icon">
               <span className="input-icon">👤</span>
               <input
@@ -409,7 +409,7 @@ function AdminGate({ theme, toggleTheme }) {
           </label>
 
           <label className="login-field">
-            पासवर्ड
+            Password
             <div className="input-with-icon">
               <span className="input-icon">🔒</span>
               <input
