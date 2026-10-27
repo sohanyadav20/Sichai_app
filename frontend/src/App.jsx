@@ -174,7 +174,6 @@ function FarmerRecordView({ theme, toggleTheme }) {
           className="theme-toggle-corner"
         />
         <h1>सिंचाई विवरण</h1>
-        <h1>Irrigation Details</h1>
         <p>अपना मोबाइल नंबर डालकर अपना रिकॉर्ड देखें / प्रिंट करें</p>
         <div className="farmer-view-search">
           <input
@@ -446,7 +445,7 @@ function AdminGate({ theme, toggleTheme }) {
             onClick={handleLogin}
             disabled={loading}
           >
-            {loading ? "जांच रहे हैं..." : "Log In"}
+            {loading ? "Loging..." : "Log In"}
           </button>
         </div>
       </div>
@@ -1113,6 +1112,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                 <div className="print-report">
                   <div className="print-only-header">
                     <h1>सिंचाई पंप रजिस्टर</h1>
+                    <h1>Irrigation Details</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                     <p>
@@ -1207,6 +1207,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                 <div className="print-report">
                   <div className="print-only-header">
                     <h1>सिंचाई पंप रजिस्टर</h1>
+                    <h1>Irrigation Details</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                     <p>
