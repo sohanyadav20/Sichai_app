@@ -1111,7 +1111,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               {printMode === "full" && (
                 <div className="print-report">
                   <div className="print-only-header">
-                    <h1>सिंचाई पंप रजिस्टर</h1>
+                    <h1>सिंचाई विवरण</h1>
                     <h1>Irrigation Details</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
@@ -1206,7 +1206,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               {printMode === "range" && (
                 <div className="print-report">
                   <div className="print-only-header">
-                    <h1>सिंचाई पंप रजिस्टर</h1>
+                    <h1>सिंचाई विवरण</h1>
                     <h1>Irrigation Details</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
@@ -1390,7 +1390,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               </div>
 
               <div className="card no-print">
-                <h3>सिंचाई रिकॉर्ड (स्क्रीन व्यू)</h3>
+                <h3>सिंचाई रिकॉर्ड </h3>
                 <div className="date-filter-row no-print">
                   <button
                     className={
