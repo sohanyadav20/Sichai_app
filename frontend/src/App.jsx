@@ -56,7 +56,7 @@ const NAV = [
 function buildWhatsAppLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `${name}, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+  const message = `${name} आपका सिंचाई का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
@@ -68,7 +68,7 @@ function buildSmsLink(phone, name, due) {
   const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode =
     digits.length === 10 ? `+91${digits}` : digits ? `+${digits}` : "";
-  const message = `${name}, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
+  const message = `${name} आपका सिंचाई का बकाया ₹${due.toFixed(
     2,
   )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   // iPhone aur Android me "body=" ke pehle alag symbol chahiye hota hai
@@ -173,7 +173,8 @@ function FarmerRecordView({ theme, toggleTheme }) {
           toggleTheme={toggleTheme}
           className="theme-toggle-corner"
         />
-        <h1>सिंचाई पंप रजिस्टर</h1>
+        <h1>सिंचाई विवरण</h1>
+        <h1>Irrigation Details</h1>
         <p>अपना मोबाइल नंबर डालकर अपना रिकॉर्ड देखें / प्रिंट करें</p>
         <div className="farmer-view-search">
           <input
@@ -306,7 +307,10 @@ export default function App() {
 function AdminGate({ theme, toggleTheme }) {
   const [auth, setAuth] = useState(() => {
     try {
-      const saved = JSON.parse(sessionStorage.getItem(AUTH_KEY) || "null");
+      // Pehle "याद रखें" wala (localStorage) check karo, phir isi tab ka session wala
+      const raw =
+        localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY);
+      const saved = JSON.parse(raw || "null");
       if (saved && saved.token) {
         setAuthToken(saved.token);
         return saved;
@@ -318,6 +322,8 @@ function AdminGate({ theme, toggleTheme }) {
   });
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -335,7 +341,13 @@ function AdminGate({ theme, toggleTheme }) {
         username: data.username,
         role: data.role,
       };
-      sessionStorage.setItem(AUTH_KEY, JSON.stringify(saved));
+      if (rememberMe) {
+        localStorage.setItem(AUTH_KEY, JSON.stringify(saved));
+        sessionStorage.removeItem(AUTH_KEY);
+      } else {
+        sessionStorage.setItem(AUTH_KEY, JSON.stringify(saved));
+        localStorage.removeItem(AUTH_KEY);
+      }
       setAuthToken(saved.token);
       setPassword("");
       setAuth(saved);
@@ -350,6 +362,7 @@ function AdminGate({ theme, toggleTheme }) {
 
   const handleLogout = () => {
     sessionStorage.removeItem(AUTH_KEY);
+    localStorage.removeItem(AUTH_KEY);
     setAuthToken(null);
     setAuth(null);
   };
@@ -366,36 +379,76 @@ function AdminGate({ theme, toggleTheme }) {
   }
 
   return (
-    <div className="farmer-view">
-      <div className="farmer-view-box">
+    <div className="login-page">
+      <div className="login-card">
         <ThemeToggle
           theme={theme}
           toggleTheme={toggleTheme}
           className="theme-toggle-corner"
         />
-        <h1>सिंचाई पंप रजिस्टर</h1>
-        <p>एडमिन पैनल — लॉगिन करें</p>
-        <div className="farmer-view-search">
-          <input
-            type="text"
-            placeholder="यूज़रनेम (मालिक के लिए खाली छोड़ें)"
-            value={username}
-            autoCapitalize="none"
-            onChange={(e) => setUsername(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-          />
-          <input
-            type="password"
-            placeholder="पासवर्ड"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLogin()}
-          />
-          <button onClick={handleLogin} disabled={loading}>
-            {loading ? "जांच रहे हैं..." : "लॉगिन करें"}
+        <div className="login-card-header">
+          <div className="login-avatar">👤</div>
+          <h1>Irrigation Register</h1>
+          <p>Admin Panel Login</p>
+        </div>
+
+        <div className="login-card-body">
+          <label className="login-field">
+            यूज़रनेम
+            <div className="input-with-icon">
+              <span className="input-icon">👤</span>
+              <input
+                type="text"
+                placeholder="Keep Empty for Owner"
+                value={username}
+                autoCapitalize="none"
+                onChange={(e) => setUsername(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              />
+            </div>
+          </label>
+
+          <label className="login-field">
+            पासवर्ड
+            <div className="input-with-icon">
+              <span className="input-icon">🔒</span>
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter Password here"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+              />
+              <button
+                type="button"
+                className="eye-toggle"
+                onClick={() => setShowPassword((v) => !v)}
+                title={showPassword ? "Hide Password" : "Show Password"}
+              >
+                {showPassword ? "🙈" : "👁️"}
+              </button>
+            </div>
+          </label>
+
+          <label className="remember-row">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Keep Remember
+          </label>
+
+          {error && <p className="farmer-view-error">{error}</p>}
+
+          <button
+            className="login-submit-btn"
+            onClick={handleLogin}
+            disabled={loading}
+          >
+            {loading ? "जांच रहे हैं..." : "Log In"}
           </button>
         </div>
-        {error && <p className="farmer-view-error">{error}</p>}
       </div>
     </div>
   );
@@ -1059,8 +1112,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               {printMode === "full" && (
                 <div className="print-report">
                   <div className="print-only-header">
-                    <h1>सिंचाई विवरण</h1>
-                    <h1>Irrigation Details</h1>
+                    <h1>सिंचाई पंप रजिस्टर</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                     <p>
@@ -1154,8 +1206,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               {printMode === "range" && (
                 <div className="print-report">
                   <div className="print-only-header">
-                    <h1>सिंचाई विवरण</h1>
-                    <h1>Irrigation Details</h1>
+                    <h1>सिंचाई पंप रजिस्टर</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                     <p>
@@ -1240,9 +1291,9 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                   </table>
 
                   <div className="summary-bar">
-                    इस अवधि की सिंचाई: ₹{rangeTotalCost.toFixed(2)}{" "}
-                    &nbsp;|&nbsp; जमा: ₹{rangeTotalPaid.toFixed(2)}{" "}
-                    &nbsp;|&nbsp; बकाया: ₹{rangeDue.toFixed(2)}
+                    कुल सिंचाई: ₹{rangeTotalCost.toFixed(2)} &nbsp;|&nbsp; कुल
+                    जमा: ₹{rangeTotalPaid.toFixed(2)} &nbsp;|&nbsp; कुल बकाया: ₹
+                    {rangeDue.toFixed(2)}
                   </div>
                 </div>
               )}
@@ -1338,7 +1389,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               </div>
 
               <div className="card no-print">
-                <h3>सिंचाई रिकॉर्ड</h3>
+                <h3>सिंचाई रिकॉर्ड (स्क्रीन व्यू)</h3>
                 <div className="date-filter-row no-print">
                   <button
                     className={

@@ -78,6 +78,136 @@ input::placeholder {
   background: var(--border);
 }
 
+/* ================= Login page (admin panel ka darwaaza) ================= */
+.login-page {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 40px 16px;
+}
+
+.login-card {
+  position: relative;
+  background: var(--card-bg);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px var(--shadow-strong);
+}
+
+.login-card-header {
+  background: linear-gradient(135deg, #4a8a65, #234b35);
+  color: white;
+  text-align: center;
+  padding: 36px 24px 28px;
+}
+
+.login-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.1rem;
+  margin: 0 auto 16px;
+}
+
+.login-card-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.3rem;
+}
+
+.login-card-header p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.login-card-body {
+  padding: 26px 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-align: left;
+}
+
+.input-with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--row-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 4px 12px;
+}
+
+.input-with-icon .input-icon {
+  font-size: 1rem;
+  opacity: 0.75;
+}
+
+.input-with-icon input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 2px;
+  font-size: 0.95rem;
+  color: var(--text);
+  outline: none;
+}
+
+.eye-toggle {
+  background: transparent;
+  padding: 4px 6px;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.eye-toggle:hover {
+  background: var(--border);
+  border-radius: 6px;
+}
+
+.remember-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.remember-row input {
+  width: 15px;
+  height: 15px;
+}
+
+.login-submit-btn {
+  background: linear-gradient(135deg, #4a8a65, #234b35);
+  color: white;
+  padding: 13px;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 4px;
+}
+
+.login-submit-btn:hover {
+  filter: brightness(1.08);
+}
+
+.login-submit-btn:disabled {
+  opacity: 0.7;
+}
+
 .app-header {
   background: #3e6b4f;
   color: white;

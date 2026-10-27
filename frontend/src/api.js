@@ -22,8 +22,10 @@ api.interceptors.response.use(
   (r) => r,
   (err) => {
     const isLogin = (err.config?.url || '').includes('/admin/login');
-    if (err.response?.status === 401 && !isLogin && sessionStorage.getItem(AUTH_KEY)) {
+    const hadAuth = sessionStorage.getItem(AUTH_KEY) || localStorage.getItem(AUTH_KEY);
+    if (err.response?.status === 401 && !isLogin && hadAuth) {
       sessionStorage.removeItem(AUTH_KEY);
+      localStorage.removeItem(AUTH_KEY);
       window.location.reload();
     }
     return Promise.reject(err);
