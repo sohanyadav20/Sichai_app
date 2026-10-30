@@ -44,12 +44,12 @@ const CROPS = [
 
 // Upar wali navigation (admin panel ke tabs)
 const NAV = [
-  { key: "farmers", label: "👥 किसान" },
-  { key: "dashboard", label: "📊 डैशबोर्ड" },
-  { key: "reports", label: "📈 रिपोर्ट" },
-  { key: "rates", label: "💰 रेट" },
-  { key: "backup", label: "🗄️ बैकअप" },
-  { key: "users", label: "👤 यूज़र" },
+  { key: "farmers", label: "👥 Farmer" },
+  { key: "dashboard", label: "📊 Dashboard" },
+  { key: "reports", label: "📈 Report" },
+  { key: "rates", label: "💰 Rate" },
+  { key: "backup", label: "🗄️ Backup" },
+  { key: "users", label: "👤 User" },
 ];
 
 // Farmer ke phone number se WhatsApp reminder link banao (Indian number assume kiya)
@@ -120,7 +120,7 @@ function ThemeToggle({ theme, toggleTheme, className = "" }) {
       onClick={toggleTheme}
       title="थीम बदलें"
     >
-      {theme === "dark" ? "☀️ लाइट" : "🌙 डार्क"}
+      {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
     </button>
   );
 }
@@ -959,8 +959,8 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
             <UsersView auth={auth} />
           ) : view === "dashboard" ? (
             <div className="dashboard">
-              <h2>📊 डैशबोर्ड — सबका बकाया एक नज़र में</h2>
-              {dashboardLoading && <p>लोड हो रहा है...</p>}
+              <h2>📊 Dashboard - All Dues</h2>
+              {dashboardLoading && <p>Loading...</p>}
               {dashboard && (
                 <>
                   <div className="dashboard-totals">
