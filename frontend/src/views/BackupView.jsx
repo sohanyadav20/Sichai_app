@@ -14,8 +14,8 @@ const ITEMS = [
   {
     key: 'entries',
     icon: '💧',
-    title: 'सारी सिंचाई एंट्री (Excel/CSV)',
-    desc: 'तारीख, फसल, घंटे, रेट और राशि — सब किसानों की।',
+    title: 'सारी एंट्री — सिंचाई + ईख पेराई (Excel/CSV)',
+    desc: 'तारीख, प्रकार, फसल, घंटे/नाद, रेट और राशि — सब किसानों की।',
     path: '/export/entries.csv',
     file: 'sichai-entries'
   },
