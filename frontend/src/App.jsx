@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback } from "react";
 import {
   getFarmers,
   addFarmerApi,
@@ -17,8 +17,8 @@ import {
   setAuthToken,
   AUTH_KEY,
   getDashboard,
-  getRates
-} from './api';
+  getRates,
+} from "./api";
 import {
   todayStr,
   rateForDate,
@@ -26,63 +26,87 @@ import {
   PERAI_CROP,
   splitEntries,
   sumCost,
-  previewCost
-} from './utils';
-import { SichaiTable, PeraiTable, SummaryBar, RANGE_LABELS } from './components/EntryTables';
-import RatesView from './views/RatesView';
-import ReportsView from './views/ReportsView';
-import BackupView from './views/BackupView';
-import UsersView from './views/UsersView';
+  previewCost,
+} from "./utils";
+import {
+  SichaiTable,
+  PeraiTable,
+  SummaryBar,
+  RANGE_LABELS,
+} from "./components/EntryTables";
+import RatesView from "./views/RatesView";
+import ReportsView from "./views/ReportsView";
+import BackupView from "./views/BackupView";
+import UsersView from "./views/UsersView";
 
-const CROPS = ['गेहूं', 'धान', 'बेहन', 'गन्ना', 'चरी', 'सरसो', 'पलेवा', 'पिछला', 'सब्जी', 'अन्य'];
+const CROPS = [
+  "गेहूं",
+  "धान",
+  "बेहन",
+  "गन्ना",
+  "चरी",
+  "सरसो",
+  "सब्जी",
+  "आलु",
+  "घास",
+  "लहसुन",
+  "प्याज",
+  "चना",
+  "पलेवा",
+  "पिछला",
+  "अन्य",
+];
 
 // Khaali entry form — type: 'sichai' (ghante x rate) ya 'perai' (ईख पेराई: नाद x rate)
 const makeBlankEntry = (rate) => ({
-  type: 'sichai',
+  type: "sichai",
   date: todayStr(),
   crop: CROPS[0],
-  place: '',
+  place: "",
   hours: 0,
   minutes: 0,
-  nad: '',
-  rate
+  nad: "",
+  rate,
 });
 
 // Upar wali navigation (admin panel ke tabs)
 const NAV = [
-  { key: 'farmers', label: '👥 किसान' },
-  { key: 'dashboard', label: '📊 डैशबोर्ड' },
-  { key: 'reports', label: '📈 रिपोर्ट' },
-  { key: 'rates', label: '💰 रेट' },
-  { key: 'backup', label: '🗄️ बैकअप' },
-  { key: 'users', label: '👤 यूज़र' }
+  { key: "farmers", label: "👥 Farmer" },
+  { key: "dashboard", label: "📊 Dashboard" },
+  { key: "reports", label: "📈 Report" },
+  { key: "rates", label: "💰 Rate" },
+  { key: "backup", label: "🗄️ Backup" },
+  { key: "users", label: "👤 User" },
 ];
 
 // Farmer ke phone number se WhatsApp reminder link banao (Indian number assume kiya)
 function buildWhatsAppLink(phone, name, due) {
-  const digits = (phone || '').replace(/\D/g, '');
+  const digits = (phone || "").replace(/\D/g, "");
   const withCountryCode = digits.length === 10 ? `91${digits}` : digits;
-  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
-    2
-  )} है। कृपया जल्द भुगतान करें। धन्यवाद।`;
+  const message = `${name} आपका सिंचाई का बकाया ₹${due.toFixed(
+    2,
+  )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   return `https://wa.me/${withCountryCode}?text=${encodeURIComponent(message)}`;
 }
 
 // Farmer ke phone number se SMS reminder link banao — click karते hi phone ka
 // default Messages app khul jayega, number aur message pehle se bhara hua.
 function buildSmsLink(phone, name, due) {
-  const digits = (phone || '').replace(/\D/g, '');
-  const withCountryCode = digits.length === 10 ? `+91${digits}` : digits ? `+${digits}` : '';
-  const message = `नमस्ते ${name} जी, आपका सिंचाई पंप का बकाया ₹${due.toFixed(
-    2
-  )} है। कृपया जल्द भुगतान करें। धन्यवाद।`;
+  const digits = (phone || "").replace(/\D/g, "");
+  const withCountryCode =
+    digits.length === 10 ? `+91${digits}` : digits ? `+${digits}` : "";
+  const message = `${name} आपका सिंचाई का बकाया ₹${due.toFixed(
+    2,
+  )} है। कृपया जल्द भुगतान करें। धन्यवाद। -सोहन यादव`;
   // iPhone aur Android me "body=" ke pehle alag symbol chahiye hota hai
-  const isIOS = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
-  const sep = isIOS ? '&' : '?';
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+  const sep = isIOS ? "&" : "?";
   return `sms:${withCountryCode}${sep}body=${encodeURIComponent(message)}`;
 }
 
-const THEME_KEY = 'sichai-theme';
+const THEME_KEY = "sichai-theme";
 
 // Dark/light theme — poore app (admin aur kisan वाला page) में इस्तेमाल होता है।
 // Pehli baar system ki setting dekh leta hai, uske baad jo chuno wahi yaad rehta hai (is browser me).
@@ -90,18 +114,21 @@ function useTheme() {
   const [theme, setTheme] = useState(() => {
     try {
       const saved = localStorage.getItem(THEME_KEY);
-      if (saved === 'light' || saved === 'dark') return saved;
+      if (saved === "light" || saved === "dark") return saved;
     } catch (e) {
       /* ignore */
     }
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
+    if (
+      window.matchMedia &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches
+    ) {
+      return "dark";
     }
-    return 'light';
+    return "light";
   });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute("data-theme", theme);
     try {
       localStorage.setItem(THEME_KEY, theme);
     } catch (e) {
@@ -109,14 +136,18 @@ function useTheme() {
     }
   }, [theme]);
 
-  const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
+  const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
   return [theme, toggleTheme];
 }
 
-function ThemeToggle({ theme, toggleTheme, className = '' }) {
+function ThemeToggle({ theme, toggleTheme, className = "" }) {
   return (
-    <button className={`theme-toggle ${className}`} onClick={toggleTheme} title="थीम बदलें">
-      {theme === 'dark' ? '☀️ लाइट' : '🌙 डार्क'}
+    <button
+      className={`theme-toggle ${className}`}
+      onClick={toggleTheme}
+      title="Change Theme"
+    >
+      {theme === "dark" ? "☀️ Light" : "🌙 Dark"}
     </button>
   );
 }
@@ -125,18 +156,18 @@ function ThemeToggle({ theme, toggleTheme, className = '' }) {
 // Isse sirf farmer ka apna record dikhta hai, koi admin controls nahi.
 // Iska link: <site-url>/?view=farmer
 function FarmerRecordView({ theme, toggleTheme }) {
-  const [phone, setPhone] = useState('');
+  const [phone, setPhone] = useState("");
   const [farmer, setFarmer] = useState(null);
   const [entries, setEntries] = useState([]);
   const [payments, setPayments] = useState([]);
   const [summary, setSummary] = useState(null);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLookup = async () => {
-    setError('');
+    setError("");
     if (!phone.trim()) {
-      setError('कृपया मोबाइल नंबर डालें।');
+      setError("कृपया मोबाइल नंबर डालें।");
       return;
     }
     setLoading(true);
@@ -145,7 +176,7 @@ function FarmerRecordView({ theme, toggleTheme }) {
       const [e, p, s] = await Promise.all([
         getEntries(f._id),
         getPayments(f._id),
-        getSummary(f._id)
+        getSummary(f._id),
       ]);
       setFarmer(f);
       setEntries(e);
@@ -153,7 +184,9 @@ function FarmerRecordView({ theme, toggleTheme }) {
       setSummary(s);
     } catch (err) {
       setFarmer(null);
-      setError(err.response?.data?.error || 'इस मोबाइल नंबर से कोई रिकॉर्ड नहीं मिला।');
+      setError(
+        err.response?.data?.error || "इस मोबाइल नंबर से कोई रिकॉर्ड नहीं मिला।",
+      );
     } finally {
       setLoading(false);
     }
@@ -164,7 +197,11 @@ function FarmerRecordView({ theme, toggleTheme }) {
   return (
     <div className="farmer-view">
       <div className="farmer-view-box no-print">
-        <ThemeToggle theme={theme} toggleTheme={toggleTheme} className="theme-toggle-corner" />
+        <ThemeToggle
+          theme={theme}
+          toggleTheme={toggleTheme}
+          className="theme-toggle-corner"
+        />
         <h1>सिंचाई पंप रजिस्टर</h1>
         <p>अपना मोबाइल नंबर डालकर अपना रिकॉर्ड देखें / प्रिंट करें</p>
         <div className="farmer-view-search">
@@ -173,10 +210,10 @@ function FarmerRecordView({ theme, toggleTheme }) {
             placeholder="मोबाइल नंबर"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleLookup()}
+            onKeyDown={(e) => e.key === "Enter" && handleLookup()}
           />
           <button onClick={handleLookup} disabled={loading}>
-            {loading ? 'खोज रहे हैं...' : 'रिकॉर्ड देखें'}
+            {loading ? "Loading..." : "रिकॉर्ड देखें"}
           </button>
         </div>
         {error && <p className="farmer-view-error">{error}</p>}
@@ -186,7 +223,7 @@ function FarmerRecordView({ theme, toggleTheme }) {
         <div className="farmer-view-report">
           <div className="no-print">
             <button className="print-btn" onClick={() => window.print()}>
-              🖨️ प्रिंट करें
+              🖨️ Print
             </button>
           </div>
 
@@ -196,12 +233,12 @@ function FarmerRecordView({ theme, toggleTheme }) {
 
           <h3>सिंचाई रिकॉर्ड</h3>
           <SichaiTable rows={sichaiEntries} />
-                  {peraiEntries.length > 0 && (
-                    <>
-                      <h3>ईख पेराई रिकॉर्ड</h3>
-                      <PeraiTable rows={peraiEntries} />
-                    </>
-                  )}
+          {peraiEntries.length > 0 && (
+            <>
+              <h3>ईख पेराई रिकॉर्ड</h3>
+              <PeraiTable rows={peraiEntries} />
+            </>
+          )}
 
           <h3>भुगतान</h3>
           <table>
@@ -228,7 +265,12 @@ function FarmerRecordView({ theme, toggleTheme }) {
             </tbody>
           </table>
 
-          <SummaryBar sichai={sumCost(sichaiEntries)} perai={sumCost(peraiEntries)} paid={summary.totalPaid} due={summary.due} />
+          <SummaryBar
+            sichai={sumCost(sichaiEntries)}
+            perai={sumCost(peraiEntries)}
+            paid={summary.totalPaid}
+            due={summary.due}
+          />
         </div>
       )}
     </div>
@@ -236,10 +278,10 @@ function FarmerRecordView({ theme, toggleTheme }) {
 }
 
 export default function App() {
-  const mode = new URLSearchParams(window.location.search).get('view');
+  const mode = new URLSearchParams(window.location.search).get("view");
   const [theme, toggleTheme] = useTheme();
 
-  if (mode === 'farmer') {
+  if (mode === "farmer") {
     return <FarmerRecordView theme={theme} toggleTheme={toggleTheme} />;
   }
 
@@ -253,8 +295,9 @@ function AdminGate({ theme, toggleTheme }) {
   const [auth, setAuth] = useState(() => {
     try {
       // Pehle "याद रखें" wala (localStorage) check karo, phir isi tab ka session wala
-      const raw = localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY);
-      const saved = JSON.parse(raw || 'null');
+      const raw =
+        localStorage.getItem(AUTH_KEY) || sessionStorage.getItem(AUTH_KEY);
+      const saved = JSON.parse(raw || "null");
       if (saved && saved.token) {
         setAuthToken(saved.token);
         return saved;
@@ -264,23 +307,27 @@ function AdminGate({ theme, toggleTheme }) {
     }
     return null;
   });
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    setError('');
+    setError("");
     if (!password.trim()) {
-      setError('पासवर्ड डालें।');
+      setError("Enter Password");
       return;
     }
     setLoading(true);
     try {
       const data = await adminLogin(username.trim(), password);
-      const saved = { token: data.token, username: data.username, role: data.role };
+      const saved = {
+        token: data.token,
+        username: data.username,
+        role: data.role,
+      };
       if (rememberMe) {
         localStorage.setItem(AUTH_KEY, JSON.stringify(saved));
         sessionStorage.removeItem(AUTH_KEY);
@@ -289,10 +336,12 @@ function AdminGate({ theme, toggleTheme }) {
         localStorage.removeItem(AUTH_KEY);
       }
       setAuthToken(saved.token);
-      setPassword('');
+      setPassword("");
       setAuth(saved);
     } catch (err) {
-      setError(err.response?.data?.error || 'लॉगिन नहीं हो पाया। दोबारा कोशिश करें।');
+      setError(
+        err.response?.data?.error || "incorrect userid or password! Try again",
+      );
     } finally {
       setLoading(false);
     }
@@ -306,66 +355,85 @@ function AdminGate({ theme, toggleTheme }) {
   };
 
   if (auth) {
-    return <AdminApp auth={auth} onLogout={handleLogout} theme={theme} toggleTheme={toggleTheme} />;
+    return (
+      <AdminApp
+        auth={auth}
+        onLogout={handleLogout}
+        theme={theme}
+        toggleTheme={toggleTheme}
+      />
+    );
   }
 
   return (
     <div className="login-page">
       <div className="login-card">
-        <ThemeToggle theme={theme} toggleTheme={toggleTheme} className="theme-toggle-corner" />
+        <ThemeToggle
+          theme={theme}
+          toggleTheme={toggleTheme}
+          className="theme-toggle-corner"
+        />
         <div className="login-card-header">
           <div className="login-avatar">👤</div>
-          <h1>सिंचाई पंप रजिस्टर</h1>
-          <p>एडमिन पैनल में लॉगिन करें</p>
+          <h1>Irrigation Register</h1>
+          <p>Login in Admin Panel</p>
         </div>
 
         <div className="login-card-body">
           <label className="login-field">
-            यूज़रनेम
+            Username
             <div className="input-with-icon">
               <span className="input-icon">👤</span>
               <input
                 type="text"
-                placeholder="मालिक के लिए खाली छोड़ें"
+                placeholder="Keep Blank for Owner"
                 value={username}
                 autoCapitalize="none"
                 onChange={(e) => setUsername(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
             </div>
           </label>
 
           <label className="login-field">
-            पासवर्ड
+            Password
             <div className="input-with-icon">
               <span className="input-icon">🔒</span>
               <input
-                type={showPassword ? 'text' : 'password'}
-                placeholder="पासवर्ड डालें"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter Your Paasword"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                onKeyDown={(e) => e.key === "Enter" && handleLogin()}
               />
               <button
                 type="button"
                 className="eye-toggle"
                 onClick={() => setShowPassword((v) => !v)}
-                title={showPassword ? 'पासवर्ड छुपाएं' : 'पासवर्ड दिखाएं'}
+                title={showPassword ? "Hide Password" : "Show Password"}
               >
-                {showPassword ? '🙈' : '👁️'}
+                {showPassword ? "🙈" : "👁️"}
               </button>
             </div>
           </label>
 
           <label className="remember-row">
-            <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
-            मुझे याद रखें
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
+            Remember Me
           </label>
 
           {error && <p className="farmer-view-error">{error}</p>}
 
-          <button className="login-submit-btn" onClick={handleLogin} disabled={loading}>
-            {loading ? 'जांच रहे हैं...' : 'लॉगिन करें'}
+          <button
+            className="login-submit-btn"
+            onClick={handleLogin}
+            disabled={loading}
+          >
+            {loading ? "Loging..." : "Login"}
           </button>
         </div>
       </div>
@@ -374,38 +442,42 @@ function AdminGate({ theme, toggleTheme }) {
 }
 
 function AdminApp({ auth, onLogout, theme, toggleTheme }) {
-  const [view, setView] = useState('farmers'); // farmers | dashboard | reports | rates | backup | users
+  const [view, setView] = useState("farmers"); // farmers | dashboard | reports | rates | backup | users
   const [farmers, setFarmers] = useState([]);
   const [activeFarmer, setActiveFarmer] = useState(null);
-  const [newFarmerName, setNewFarmerName] = useState('');
-  const [newFarmerPhone, setNewFarmerPhone] = useState('');
+  const [newFarmerName, setNewFarmerName] = useState("");
+  const [newFarmerPhone, setNewFarmerPhone] = useState("");
 
   const [entries, setEntries] = useState([]);
   const [payments, setPayments] = useState([]);
-  const [summary, setSummary] = useState({ totalCost: 0, totalPaid: 0, due: 0 });
+  const [summary, setSummary] = useState({
+    totalCost: 0,
+    totalPaid: 0,
+    due: 0,
+  });
 
   const [entryForm, setEntryForm] = useState(makeBlankEntry(60));
   const [editingEntryId, setEditingEntryId] = useState(null);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [message, setMessage] = useState('');
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [message, setMessage] = useState("");
 
   const [editingFarmerId, setEditingFarmerId] = useState(null);
-  const [farmerEditName, setFarmerEditName] = useState('');
-  const [farmerEditPhone, setFarmerEditPhone] = useState('');
+  const [farmerEditName, setFarmerEditName] = useState("");
+  const [farmerEditPhone, setFarmerEditPhone] = useState("");
 
-  const [datePreset, setDatePreset] = useState('all'); // 'all' | 'thisMonth' | 'lastMonth' | 'custom'
-  const [customFrom, setCustomFrom] = useState('');
-  const [customTo, setCustomTo] = useState('');
+  const [datePreset, setDatePreset] = useState("all"); // 'all' | 'thisMonth' | 'lastMonth' | 'custom'
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
 
   // ---- Print: "पूरा" aur "तारीख से तारीख तक" dono alag-alag, on-screen filter se bilkul alag ----
   const [printMode, setPrintMode] = useState(null); // null | 'full' | 'range'
   const [showRangePrint, setShowRangePrint] = useState(false);
-  const [printRangeFrom, setPrintRangeFrom] = useState('');
-  const [printRangeTo, setPrintRangeTo] = useState('');
+  const [printRangeFrom, setPrintRangeFrom] = useState("");
+  const [printRangeTo, setPrintRangeTo] = useState("");
 
   const [dashboard, setDashboard] = useState(null);
   const [dashboardLoading, setDashboardLoading] = useState(false);
-  const [dashSearch, setDashSearch] = useState('');
+  const [dashSearch, setDashSearch] = useState("");
   const [dashOnlyDue, setDashOnlyDue] = useState(false);
 
   const [rates, setRates] = useState([]);
@@ -413,7 +485,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
   const showMessage = (msg) => {
     setMessage(msg);
-    setTimeout(() => setMessage(''), 3000);
+    setTimeout(() => setMessage(""), 3000);
   };
 
   const loadFarmers = useCallback(async () => {
@@ -427,7 +499,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
       const data = await getDashboard();
       setDashboard(data);
     } catch (err) {
-      showMessage('डैशबोर्ड लोड नहीं हो पाया।');
+      showMessage("डैशबोर्ड लोड नहीं हो पाया।");
     } finally {
       setDashboardLoading(false);
     }
@@ -443,7 +515,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
     const [e, p, s] = await Promise.all([
       getEntries(farmerId),
       getPayments(farmerId),
-      getSummary(farmerId)
+      getSummary(farmerId),
     ]);
     setEntries(e);
     setPayments(p);
@@ -465,7 +537,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
   // Nayi entry me tareekh ke hisaab se rate apne-aap bharo (rate history se)
   useEffect(() => {
-    if (editingEntryId || rateManual || entryForm.type === 'perai') return;
+    if (editingEntryId || rateManual || entryForm.type === "perai") return;
     const auto = rateForDate(rates, entryForm.date);
     setEntryForm((f) => (Number(f.rate) === auto ? f : { ...f, rate: auto }));
   }, [rates, entryForm.date, entryForm.type, editingEntryId, rateManual]);
@@ -475,7 +547,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
   }, [activeFarmer, loadFarmerData]);
 
   useEffect(() => {
-    if (view === 'dashboard') {
+    if (view === "dashboard") {
       loadDashboard();
     }
   }, [view, loadDashboard]);
@@ -490,26 +562,30 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
   // Print dialog band hote hi (chhapo ya cancel karo) print-wala block hata do
   useEffect(() => {
     const handler = () => setPrintMode(null);
-    window.addEventListener('afterprint', handler);
-    return () => window.removeEventListener('afterprint', handler);
+    window.addEventListener("afterprint", handler);
+    return () => window.removeEventListener("afterprint", handler);
   }, []);
 
   const handlePrintRangeClick = () => {
     if (!printRangeFrom || !printRangeTo) {
-      showMessage('पहले दोनों तारीख चुनें।');
+      showMessage("पहले दोनों तारीख चुनें।");
       return;
     }
     if (printRangeFrom > printRangeTo) {
-      showMessage('पहली तारीख दूसरी तारीख से पहले या बराबर होनी चाहिए।');
+      showMessage("पहली तारीख दूसरी तारीख से पहले या बराबर होनी चाहिए।");
       return;
     }
-    setPrintMode('range');
+    setPrintMode("range");
   };
 
   const { sichai: fullSichai, perai: fullPerai } = splitEntries(entries);
-  const rangeEntries = entries.filter((e) => e.date >= printRangeFrom && e.date <= printRangeTo);
+  const rangeEntries = entries.filter(
+    (e) => e.date >= printRangeFrom && e.date <= printRangeTo,
+  );
   const { sichai: rangeSichai, perai: rangePerai } = splitEntries(rangeEntries);
-  const rangePayments = payments.filter((p) => p.date >= printRangeFrom && p.date <= printRangeTo);
+  const rangePayments = payments.filter(
+    (p) => p.date >= printRangeFrom && p.date <= printRangeTo,
+  );
   const rangeTotalCost = sumCost(rangeEntries);
   const rangeTotalPaid = rangePayments.reduce((s, p) => s + p.amount, 0);
   const rangeDue = rangeTotalCost - rangeTotalPaid;
@@ -518,87 +594,108 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
     const f = farmers.find((x) => x._id === farmerId);
     if (f) {
       setActiveFarmer(f);
-      setView('farmers');
+      setView("farmers");
     }
   };
 
   // ---- Date range filter ke liye from/to nikaalo ----
   const getDateRange = () => {
     const now = new Date();
-    if (datePreset === 'thisMonth') {
-      const from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
+    if (datePreset === "thisMonth") {
+      const from = new Date(now.getFullYear(), now.getMonth(), 1)
+        .toISOString()
+        .slice(0, 10);
       const to = todayStr();
       return { from, to };
     }
-    if (datePreset === 'lastMonth') {
-      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().slice(0, 10);
-      const to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().slice(0, 10);
+    if (datePreset === "lastMonth") {
+      const from = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        .toISOString()
+        .slice(0, 10);
+      const to = new Date(now.getFullYear(), now.getMonth(), 0)
+        .toISOString()
+        .slice(0, 10);
       return { from, to };
     }
-    if (datePreset === 'custom') {
-      return { from: customFrom || '0000-01-01', to: customTo || '9999-12-31' };
+    if (datePreset === "custom") {
+      return { from: customFrom || "0000-01-01", to: customTo || "9999-12-31" };
     }
-    return { from: '0000-01-01', to: '9999-12-31' };
+    return { from: "0000-01-01", to: "9999-12-31" };
   };
 
   const { from: filterFrom, to: filterTo } = getDateRange();
-  const filteredEntries = entries.filter((e) => e.date >= filterFrom && e.date <= filterTo);
-  const { sichai: filteredSichai, perai: filteredPerai } = splitEntries(filteredEntries);
+  const filteredEntries = entries.filter(
+    (e) => e.date >= filterFrom && e.date <= filterTo,
+  );
+  const { sichai: filteredSichai, perai: filteredPerai } =
+    splitEntries(filteredEntries);
 
   // ---- Farmer edit actions ----
   const handleStartEditFarmer = (farmer) => {
     setEditingFarmerId(farmer._id);
     setFarmerEditName(farmer.name);
-    setFarmerEditPhone(farmer.phone || '');
+    setFarmerEditPhone(farmer.phone || "");
   };
 
   const handleCancelEditFarmer = () => {
     setEditingFarmerId(null);
-    setFarmerEditName('');
-    setFarmerEditPhone('');
+    setFarmerEditName("");
+    setFarmerEditPhone("");
   };
 
   const handleSaveFarmerEdit = async () => {
     if (!farmerEditName.trim() || !farmerEditPhone.trim()) {
-      showMessage('नाम और मोबाइल नंबर दोनों लिखें।');
+      showMessage("नाम और मोबाइल नंबर दोनों लिखें।");
       return;
     }
     try {
-      const updated = await updateFarmerApi(editingFarmerId, farmerEditName.trim(), farmerEditPhone.trim());
+      const updated = await updateFarmerApi(
+        editingFarmerId,
+        farmerEditName.trim(),
+        farmerEditPhone.trim(),
+      );
       await loadFarmers();
       if (activeFarmer?._id === editingFarmerId) {
         setActiveFarmer(updated);
       }
       handleCancelEditFarmer();
-      showMessage('किसान की जानकारी अपडेट हो गई।');
+      showMessage("किसान की जानकारी अपडेट हो गई।");
     } catch (err) {
-      showMessage(err.response?.data?.error || 'त्रुटि हुई।');
+      showMessage(err.response?.data?.error || "त्रुटि हुई।");
     }
   };
 
   // ---- Farmer actions ----
   const handleAddFarmer = async () => {
     if (!newFarmerName.trim()) {
-      showMessage('किसान का नाम लिखें।');
+      showMessage("किसान का नाम लिखें।");
       return;
     }
     if (!newFarmerPhone.trim()) {
-      showMessage('मोबाइल नंबर लिखें।');
+      showMessage("मोबाइल नंबर लिखें।");
       return;
     }
     try {
-      const farmer = await addFarmerApi(newFarmerName.trim(), newFarmerPhone.trim());
-      setNewFarmerName('');
-      setNewFarmerPhone('');
+      const farmer = await addFarmerApi(
+        newFarmerName.trim(),
+        newFarmerPhone.trim(),
+      );
+      setNewFarmerName("");
+      setNewFarmerPhone("");
       await loadFarmers();
       setActiveFarmer(farmer);
     } catch (err) {
-      showMessage(err.response?.data?.error || 'त्रुटि हुई।');
+      showMessage(err.response?.data?.error || "त्रुटि हुई।");
     }
   };
 
   const handleDeleteFarmer = async (farmer) => {
-    if (!window.confirm(`${farmer.name} को हटाएं? इनकी सारी एंट्री भी मिट जाएंगी।`)) return;
+    if (
+      !window.confirm(
+        `${farmer.name} को हटाएं? इनकी सारी एंट्री भी मिट जाएंगी।`,
+      )
+    )
+      return;
     await deleteFarmerApi(farmer._id);
     if (activeFarmer?._id === farmer._id) setActiveFarmer(null);
     await loadFarmers();
@@ -607,15 +704,18 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
   // ---- Entry actions (add ya edit, dono isi form se) ----
   const handleSaveEntry = async () => {
     if (!activeFarmer) {
-      showMessage('पहले लिस्ट से एक किसान चुनें।');
+      showMessage("पहले लिस्ट से एक किसान चुनें।");
       return;
     }
     try {
       // ईख पेराई me फसल apne-aap "ईख पेराई" rahegi
-      const payload = entryForm.type === 'perai' ? { ...entryForm, crop: PERAI_CROP, place: '' } : entryForm;
+      const payload =
+        entryForm.type === "perai"
+          ? { ...entryForm, crop: PERAI_CROP, place: "" }
+          : entryForm;
       if (editingEntryId) {
         await updateEntryApi(editingEntryId, payload);
-        showMessage('एंट्री अपडेट हो गई।');
+        showMessage("एंट्री अपडेट हो गई।");
       } else {
         await addEntryApi(activeFarmer._id, payload);
       }
@@ -624,21 +724,21 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
       setRateManual(false);
       await loadFarmerData(activeFarmer._id);
     } catch (err) {
-      showMessage(err.response?.data?.error || 'त्रुटि हुई।');
+      showMessage(err.response?.data?.error || "त्रुटि हुई।");
     }
   };
 
   const handleStartEditEntry = (entry) => {
     setEditingEntryId(entry._id);
     setEntryForm({
-      type: entry.type === 'perai' ? 'perai' : 'sichai',
+      type: entry.type === "perai" ? "perai" : "sichai",
       date: entry.date,
       crop: entry.crop,
-      place: entry.type === 'perai' ? '' : entry.place || '',
+      place: entry.type === "perai" ? "" : entry.place || "",
       hours: entry.hours,
       minutes: entry.minutes,
-      nad: entry.type === 'perai' ? entry.nad : '',
-      rate: entry.rate
+      nad: entry.type === "perai" ? entry.nad : "",
+      rate: entry.rate,
     });
   };
 
@@ -646,9 +746,9 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
   const handleChangeEntryType = (type) => {
     setRateManual(false);
     setEntryForm((f) =>
-      type === 'perai'
-        ? { ...f, type, crop: PERAI_CROP, place: '', rate: DEFAULT_PERAI_RATE }
-        : { ...f, type, crop: CROPS[0], rate: rateForDate(rates, f.date) }
+      type === "perai"
+        ? { ...f, type, crop: PERAI_CROP, place: "", rate: DEFAULT_PERAI_RATE }
+        : { ...f, type, crop: CROPS[0], rate: rateForDate(rates, f.date) },
     );
   };
 
@@ -667,15 +767,15 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
   // ---- Payment actions ----
   const handleAddPayment = async () => {
     if (!activeFarmer) {
-      showMessage('पहले लिस्ट से एक किसान चुनें।');
+      showMessage("पहले लिस्ट से एक किसान चुनें।");
       return;
     }
     try {
       await addPaymentApi(activeFarmer._id, paymentAmount);
-      setPaymentAmount('');
+      setPaymentAmount("");
       await loadFarmerData(activeFarmer._id);
     } catch (err) {
-      showMessage(err.response?.data?.error || 'त्रुटि हुई।');
+      showMessage(err.response?.data?.error || "त्रुटि हुई।");
     }
   };
 
@@ -691,8 +791,10 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
         if (dashOnlyDue && !(f.due > 0)) return false;
         if (!dashQuery) return true;
         return (
-          (f.name || '').toLowerCase().includes(dashQuery) ||
-          (f.phone || '').replace(/\s/g, '').includes(dashQuery.replace(/\s/g, ''))
+          (f.name || "").toLowerCase().includes(dashQuery) ||
+          (f.phone || "")
+            .replace(/\s/g, "")
+            .includes(dashQuery.replace(/\s/g, ""))
         );
       })
     : [];
@@ -701,15 +803,15 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
     <div className="app">
       <header className="app-header no-print">
         <div className="app-header-top">
-          <h1>सिंचाई पंप रजिस्टर</h1>
+          <h1>Irrigation Register</h1>
           <div className="header-user">
             <span>
               👤 {auth.username}
-              {auth.role === 'owner' ? ' (मालिक)' : ''}
+              {auth.role === "Owner" ? " (मालिक)" : ""}
             </span>
             <ThemeToggle theme={theme} toggleTheme={toggleTheme} />
             <button className="logout-btn" onClick={onLogout}>
-              लॉगआउट
+              Logout
             </button>
           </div>
         </div>
@@ -717,7 +819,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
           {NAV.map((n) => (
             <button
               key={n.key}
-              className={view === n.key ? 'nav-btn active' : 'nav-btn'}
+              className={view === n.key ? "nav-btn active" : "nav-btn"}
               onClick={() => setView(n.key)}
             >
               {n.label}
@@ -730,120 +832,134 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
 
       <div className="main-layout">
         {/* Left: Farmer list (sirf "किसान" tab me) */}
-        {view === 'farmers' && (
-        <aside className="sidebar no-print">
-          <h2>किसान सूची</h2>
-          <div className="add-row" style={{ flexDirection: 'column', gap: '6px' }}>
-            <input
-              type="text"
-              placeholder="नया किसान नाम"
-              value={newFarmerName}
-              onChange={(e) => setNewFarmerName(e.target.value)}
-            />
-            <input
-              type="tel"
-              placeholder="मोबाइल नंबर"
-              value={newFarmerPhone}
-              onChange={(e) => setNewFarmerPhone(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddFarmer()}
-            />
-            <button onClick={handleAddFarmer}>+ जोड़ें</button>
-          </div>
+        {view === "farmers" && (
+          <aside className="sidebar no-print">
+            <h2>किसान सूची</h2>
+            <div
+              className="add-row"
+              style={{ flexDirection: "column", gap: "6px" }}
+            >
+              <input
+                type="text"
+                placeholder="नया किसान नाम"
+                value={newFarmerName}
+                onChange={(e) => setNewFarmerName(e.target.value)}
+              />
+              <input
+                type="tel"
+                placeholder="मोबाइल नंबर"
+                value={newFarmerPhone}
+                onChange={(e) => setNewFarmerPhone(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleAddFarmer()}
+              />
+              <button onClick={handleAddFarmer}>+ जोड़ें</button>
+            </div>
 
-          <a
-            className="farmer-link"
-            href="?view=farmer"
-            target="_blank"
-            rel="noreferrer"
-          >
-            🔗 किसान के लिए लिंक (रिकॉर्ड देखें)
-          </a>
-          <ul className="farmer-list">
-            {farmers.map((f) =>
-              editingFarmerId === f._id ? (
-                <li key={f._id} className="farmer-edit-row">
-                  <input
-                    type="text"
-                    value={farmerEditName}
-                    onChange={(e) => setFarmerEditName(e.target.value)}
-                    placeholder="नाम"
-                  />
-                  <input
-                    type="tel"
-                    value={farmerEditPhone}
-                    onChange={(e) => setFarmerEditPhone(e.target.value)}
-                    placeholder="मोबाइल नंबर"
-                  />
-                  <div className="farmer-edit-actions">
-                    <button onClick={handleSaveFarmerEdit}>सेव करें</button>
-                    <button className="cancel-btn" onClick={handleCancelEditFarmer}>
-                      रद्द करें
-                    </button>
-                  </div>
-                </li>
-              ) : (
-                <li
-                  key={f._id}
-                  className={activeFarmer?._id === f._id ? 'active' : ''}
-                  onClick={() => setActiveFarmer(f)}
-                >
-                  <span>{f.name}</span>
-                  <span className="farmer-row-actions">
-                    <button
-                      className="edit-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStartEditFarmer(f);
-                      }}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      className="delete-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteFarmer(f);
-                      }}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                </li>
-              )
-            )}
-            {farmers.length === 0 && <li className="empty">कोई किसान नहीं</li>}
-          </ul>
-        </aside>
+            <a
+              className="farmer-link"
+              href="?view=farmer"
+              target="_blank"
+              rel="noreferrer"
+            >
+              🔗 किसान के लिए लिंक (रिकॉर्ड देखें)
+            </a>
+            <ul className="farmer-list">
+              {farmers.map((f) =>
+                editingFarmerId === f._id ? (
+                  <li key={f._id} className="farmer-edit-row">
+                    <input
+                      type="text"
+                      value={farmerEditName}
+                      onChange={(e) => setFarmerEditName(e.target.value)}
+                      placeholder="नाम"
+                    />
+                    <input
+                      type="tel"
+                      value={farmerEditPhone}
+                      onChange={(e) => setFarmerEditPhone(e.target.value)}
+                      placeholder="मोबाइल नंबर"
+                    />
+                    <div className="farmer-edit-actions">
+                      <button onClick={handleSaveFarmerEdit}>सेव करें</button>
+                      <button
+                        className="cancel-btn"
+                        onClick={handleCancelEditFarmer}
+                      >
+                        रद्द करें
+                      </button>
+                    </div>
+                  </li>
+                ) : (
+                  <li
+                    key={f._id}
+                    className={activeFarmer?._id === f._id ? "active" : ""}
+                    onClick={() => setActiveFarmer(f)}
+                  >
+                    <span>{f.name}</span>
+                    <span className="farmer-row-actions">
+                      <button
+                        className="edit-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartEditFarmer(f);
+                        }}
+                      >
+                        ✎
+                      </button>
+                      <button
+                        className="delete-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteFarmer(f);
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  </li>
+                ),
+              )}
+              {farmers.length === 0 && (
+                <li className="empty">कोई किसान नहीं</li>
+              )}
+            </ul>
+          </aside>
         )}
 
         {/* Right: Entry + Payment */}
         <main className="content">
-          {view === 'reports' ? (
+          {view === "reports" ? (
             <ReportsView theme={theme} />
-          ) : view === 'rates' ? (
+          ) : view === "rates" ? (
             <RatesView rates={rates} onChanged={loadRates} />
-          ) : view === 'backup' ? (
+          ) : view === "backup" ? (
             <BackupView />
-          ) : view === 'users' ? (
+          ) : view === "users" ? (
             <UsersView auth={auth} />
-          ) : view === 'dashboard' ? (
+          ) : view === "dashboard" ? (
             <div className="dashboard">
-              <h2>📊 डैशबोर्ड — सबका बकाया एक नज़र में</h2>
+              <h2>📊 Dashboard - In one view</h2>
               {dashboardLoading && <p>लोड हो रहा है...</p>}
               {dashboard && (
                 <>
                   <div className="dashboard-totals">
                     <div className="dash-stat">
                       <span className="dash-label">कुल सिंचाई</span>
-                      <span className="dash-value">₹{dashboard.grandTotalCost.toFixed(2)}</span>
+                      <span className="dash-value">
+                        ₹{dashboard.grandTotalCost.toFixed(2)}
+                      </span>
                     </div>
                     <div className="dash-stat">
                       <span className="dash-label">कुल जमा</span>
-                      <span className="dash-value">₹{dashboard.grandTotalPaid.toFixed(2)}</span>
+                      <span className="dash-value">
+                        ₹{dashboard.grandTotalPaid.toFixed(2)}
+                      </span>
                     </div>
                     <div className="dash-stat dash-due">
                       <span className="dash-label">कुल बकाया</span>
-                      <span className="dash-value">₹{dashboard.grandTotalDue.toFixed(2)}</span>
+                      <span className="dash-value">
+                        ₹{dashboard.grandTotalDue.toFixed(2)}
+                      </span>
                     </div>
                   </div>
 
@@ -864,7 +980,8 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                       सिर्फ बकाया वाले
                     </label>
                     <span className="dash-count">
-                      {visibleDashFarmers.length} / {dashboard.farmers.length} किसान
+                      {visibleDashFarmers.length} / {dashboard.farmers.length}{" "}
+                      किसान
                     </span>
                   </div>
 
@@ -872,13 +989,17 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     {visibleDashFarmers.map((f) => (
                       <div
                         key={f._id}
-                        className={`dash-card ${f.due > 0 ? 'due-pos' : 'due-clear'}`}
+                        className={`dash-card ${f.due > 0 ? "due-pos" : "due-clear"}`}
                         onClick={() => openFarmerFromDashboard(f._id)}
                       >
                         <div className="dash-card-top">
                           <span className="dash-name">{f.name}</span>
-                          <span className={`dash-badge ${f.due > 0 ? 'badge-due' : 'badge-clear'}`}>
-                            {f.due > 0 ? `₹${f.due.toFixed(2)} बकाया` : 'सब भुगतान हो गया'}
+                          <span
+                            className={`dash-badge ${f.due > 0 ? "badge-due" : "badge-clear"}`}
+                          >
+                            {f.due > 0
+                              ? `₹${f.due.toFixed(2)} बकाया`
+                              : "सब भुगतान हो गया"}
                           </span>
                         </div>
                         <div className="dash-card-bottom">
@@ -910,7 +1031,9 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     ))}
                     {visibleDashFarmers.length === 0 && (
                       <p className="empty">
-                        {dashboard.farmers.length === 0 ? 'अभी कोई किसान नहीं है।' : 'कोई किसान नहीं मिला।'}
+                        {dashboard.farmers.length === 0
+                          ? "अभी कोई किसान नहीं है।"
+                          : "कोई किसान नहीं मिला।"}
                       </p>
                     )}
                   </div>
@@ -924,7 +1047,10 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               <div className="farmer-header no-print">
                 <h2>{activeFarmer.name} — सिंचाई / पेराई एंट्री</h2>
                 <div className="print-btn-group">
-                  <button className="print-btn" onClick={() => setPrintMode('full')}>
+                  <button
+                    className="print-btn"
+                    onClick={() => setPrintMode("full")}
+                  >
                     🖨️ पूरा प्रिंट करें
                   </button>
                   <button
@@ -961,13 +1087,16 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               )}
 
               {/* पूरा रिकॉर्ड — hamesha SAARI entries + SAARE payments, kisi bhi on-screen filter se asar nahi */}
-              {printMode === 'full' && (
+              {printMode === "full" && (
                 <div className="print-report">
                   <div className="print-only-header">
-                    <h1>सिंचाई पंप रजिस्टर</h1>
+                    <h1>Irrigation Details</h1>
+                    <h1>सिचाई विवरण</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
-                    <p>रिपोर्ट: पूरा रिकॉर्ड &nbsp;|&nbsp; तारीख: {todayStr()}</p>
+                    <p>
+                      रिपोर्ट: पूरा रिकॉर्ड &nbsp;|&nbsp; तारीख: {todayStr()}
+                    </p>
                   </div>
 
                   <h3>सिंचाई रिकॉर्ड</h3>
@@ -1004,29 +1133,41 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     </tbody>
                   </table>
 
-                  <SummaryBar sichai={sumCost(fullSichai)} perai={sumCost(fullPerai)} paid={summary.totalPaid} due={summary.due} />
+                  <SummaryBar
+                    sichai={sumCost(fullSichai)}
+                    perai={sumCost(fullPerai)}
+                    paid={summary.totalPaid}
+                    due={summary.due}
+                  />
                 </div>
               )}
 
               {/* तारीख से तारीख तक — sirf usi avadhi ki entries, aur usi beech me aaye hue payments */}
-              {printMode === 'range' && (
+              {printMode === "range" && (
                 <div className="print-report">
                   <div className="print-only-header">
-                    <h1>सिंचाई पंप रजिस्टर</h1>
+                    <h1>Irrigation Details</h1>
+                    <h1>सिचाई विवरण</h1>
                     <h2>{activeFarmer.name}</h2>
                     {activeFarmer.phone && <p>मोबाइल: {activeFarmer.phone}</p>}
                     <p>
-                      अवधि: {printRangeFrom} से {printRangeTo} &nbsp;|&nbsp; तारीख: {todayStr()}
+                      अवधि: {printRangeFrom} से {printRangeTo} &nbsp;|&nbsp;
+                      तारीख: {todayStr()}
                     </p>
                   </div>
 
                   <h3>
                     सिंचाई रिकॉर्ड ({printRangeFrom} से {printRangeTo})
                   </h3>
-                  <SichaiTable rows={rangeSichai} emptyText="इस अवधि में कोई एंट्री नहीं" />
+                  <SichaiTable
+                    rows={rangeSichai}
+                    emptyText="इस अवधि में कोई एंट्री नहीं"
+                  />
                   {rangePerai.length > 0 && (
                     <>
-                      <h3>ईख पेराई रिकॉर्ड ({printRangeFrom} से {printRangeTo})</h3>
+                      <h3>
+                        ईख पेराई रिकॉर्ड ({printRangeFrom} से {printRangeTo})
+                      </h3>
                       <PeraiTable rows={rangePerai} />
                     </>
                   )}
@@ -1071,23 +1212,31 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               <div className="card no-print">
                 <h3>
                   {editingEntryId
-                    ? 'एंट्री सुधारें'
-                    : entryForm.type === 'perai'
-                    ? 'नई ईख पेराई एंट्री'
-                    : 'नई सिंचाई एंट्री'}
+                    ? "एंट्री सुधारें"
+                    : entryForm.type === "perai"
+                      ? "नई ईख पेराई एंट्री"
+                      : "नई सिंचाई एंट्री"}
                 </h3>
                 <div className="type-switch">
                   <button
                     type="button"
-                    className={entryForm.type === 'sichai' ? 'filter-btn active' : 'filter-btn'}
-                    onClick={() => handleChangeEntryType('sichai')}
+                    className={
+                      entryForm.type === "sichai"
+                        ? "filter-btn active"
+                        : "filter-btn"
+                    }
+                    onClick={() => handleChangeEntryType("sichai")}
                   >
                     💧 सिंचाई
                   </button>
                   <button
                     type="button"
-                    className={entryForm.type === 'perai' ? 'filter-btn active' : 'filter-btn'}
-                    onClick={() => handleChangeEntryType('perai')}
+                    className={
+                      entryForm.type === "perai"
+                        ? "filter-btn active"
+                        : "filter-btn"
+                    }
+                    onClick={() => handleChangeEntryType("perai")}
                   >
                     🌾 ईख पेराई
                   </button>
@@ -1098,10 +1247,12 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     <input
                       type="date"
                       value={entryForm.date}
-                      onChange={(e) => setEntryForm((f) => ({ ...f, date: e.target.value }))}
+                      onChange={(e) =>
+                        setEntryForm((f) => ({ ...f, date: e.target.value }))
+                      }
                     />
                   </label>
-                  {entryForm.type === 'perai' ? (
+                  {entryForm.type === "perai" ? (
                     <label>
                       नाद (रस की संख्या)
                       <input
@@ -1110,7 +1261,9 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                         step="any"
                         placeholder="जैसे: 3"
                         value={entryForm.nad}
-                        onChange={(e) => setEntryForm((f) => ({ ...f, nad: e.target.value }))}
+                        onChange={(e) =>
+                          setEntryForm((f) => ({ ...f, nad: e.target.value }))
+                        }
                       />
                     </label>
                   ) : (
@@ -1119,7 +1272,12 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                         फसल
                         <select
                           value={entryForm.crop}
-                          onChange={(e) => setEntryForm((f) => ({ ...f, crop: e.target.value }))}
+                          onChange={(e) =>
+                            setEntryForm((f) => ({
+                              ...f,
+                              crop: e.target.value,
+                            }))
+                          }
                         >
                           {CROPS.map((c) => (
                             <option key={c} value={c}>
@@ -1134,7 +1292,12 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                           type="number"
                           min="0"
                           value={entryForm.hours}
-                          onChange={(e) => setEntryForm((f) => ({ ...f, hours: e.target.value }))}
+                          onChange={(e) =>
+                            setEntryForm((f) => ({
+                              ...f,
+                              hours: e.target.value,
+                            }))
+                          }
                         />
                       </label>
                       <label>
@@ -1144,24 +1307,33 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                           min="0"
                           max="59"
                           value={entryForm.minutes}
-                          onChange={(e) => setEntryForm((f) => ({ ...f, minutes: e.target.value }))}
+                          onChange={(e) =>
+                            setEntryForm((f) => ({
+                              ...f,
+                              minutes: e.target.value,
+                            }))
+                          }
                         />
                       </label>
                     </>
                   )}
-                  {entryForm.type !== 'perai' && (
+                  {entryForm.type !== "perai" && (
                     <label>
                       जगह / खेत का नाम
                       <input
                         type="text"
                         placeholder="जैसे: उत्तर वाला खेत"
                         value={entryForm.place}
-                        onChange={(e) => setEntryForm((f) => ({ ...f, place: e.target.value }))}
+                        onChange={(e) =>
+                          setEntryForm((f) => ({ ...f, place: e.target.value }))
+                        }
                       />
                     </label>
                   )}
                   <label>
-                    {entryForm.type === 'perai' ? 'रेट (₹/नाद)' : 'रेट (₹/घंटा)'}
+                    {entryForm.type === "perai"
+                      ? "रेट (₹/नाद)"
+                      : "रेट (₹/घंटा)"}
                     <input
                       type="number"
                       min="0"
@@ -1173,56 +1345,83 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     />
                   </label>
                 </div>
-                {entryForm.type === 'perai' && (
-                  <p className="hint">अनुमानित राशि: ₹{previewCost(entryForm).toFixed(2)}</p>
+                {entryForm.type === "perai" && (
+                  <p className="hint">
+                    अनुमानित राशि: ₹{previewCost(entryForm).toFixed(2)}
+                  </p>
                 )}
                 <button className="primary" onClick={handleSaveEntry}>
-                  {editingEntryId ? 'अपडेट करें' : 'एंट्री जोड़ें'}
+                  {editingEntryId ? "अपडेट करें" : "एंट्री जोड़ें"}
                 </button>
                 {editingEntryId && (
-                  <button className="cancel-btn" onClick={handleCancelEditEntry}>
+                  <button
+                    className="cancel-btn"
+                    onClick={handleCancelEditEntry}
+                  >
                     रद्द करें
                   </button>
                 )}
               </div>
 
               <div className="card no-print">
-                <h3>सिंचाई रिकॉर्ड (स्क्रीन व्यू)</h3>
+                <h3>सिंचाई रिकॉर्ड</h3>
                 <div className="date-filter-row no-print">
                   <button
-                    className={datePreset === 'all' ? 'filter-btn active' : 'filter-btn'}
-                    onClick={() => setDatePreset('all')}
+                    className={
+                      datePreset === "all" ? "filter-btn active" : "filter-btn"
+                    }
+                    onClick={() => setDatePreset("all")}
                   >
                     सभी
                   </button>
                   <button
-                    className={datePreset === 'thisMonth' ? 'filter-btn active' : 'filter-btn'}
-                    onClick={() => setDatePreset('thisMonth')}
+                    className={
+                      datePreset === "thisMonth"
+                        ? "filter-btn active"
+                        : "filter-btn"
+                    }
+                    onClick={() => setDatePreset("thisMonth")}
                   >
                     इस महीने
                   </button>
                   <button
-                    className={datePreset === 'lastMonth' ? 'filter-btn active' : 'filter-btn'}
-                    onClick={() => setDatePreset('lastMonth')}
+                    className={
+                      datePreset === "lastMonth"
+                        ? "filter-btn active"
+                        : "filter-btn"
+                    }
+                    onClick={() => setDatePreset("lastMonth")}
                   >
                     पिछले महीने
                   </button>
                   <button
-                    className={datePreset === 'custom' ? 'filter-btn active' : 'filter-btn'}
-                    onClick={() => setDatePreset('custom')}
+                    className={
+                      datePreset === "custom"
+                        ? "filter-btn active"
+                        : "filter-btn"
+                    }
+                    onClick={() => setDatePreset("custom")}
                   >
                     तारीख चुनें
                   </button>
                 </div>
-                {datePreset === 'custom' && (
+                {datePreset === "custom" && (
                   <div className="date-filter-row no-print">
                     <label>
                       से
-                      <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+                      <input
+                        type="date"
+                        value={customFrom}
+                        onChange={(e) => setCustomFrom(e.target.value)}
+                      />
                     </label>
                     <label>
                       तक
-                      <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+                      <input
+                        type="date"
+                        value={customTo}
+                        onChange={(e) => setCustomTo(e.target.value)}
+                      />
                     </label>
                   </div>
                 )}
@@ -1234,8 +1433,12 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               </div>
 
               <div className="card no-print">
-                <h3>ईख पेराई रिकॉर्ड (स्क्रीन व्यू)</h3>
-                {datePreset !== 'all' && <p className="hint">ऊपर चुनी हुई अवधि के हिसाब से दिखा रहे हैं।</p>}
+                <h3>ईख पेराई रिकॉर्ड</h3>
+                {datePreset !== "all" && (
+                  <p className="hint">
+                    ऊपर चुनी हुई अवधि के हिसाब से दिखा रहे हैं।
+                  </p>
+                )}
                 <PeraiTable
                   rows={filteredPerai}
                   onEdit={handleStartEditEntry}
@@ -1251,7 +1454,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                     placeholder="राशि ₹"
                     value={paymentAmount}
                     onChange={(e) => setPaymentAmount(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddPayment()}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddPayment()}
                   />
                   <button onClick={handleAddPayment}>पैसा जमा करें</button>
                 </div>
@@ -1269,7 +1472,10 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
                         <td>{p.date}</td>
                         <td>{p.amount.toFixed(2)}</td>
                         <td>
-                          <button className="delete-btn" onClick={() => handleDeletePayment(p._id)}>
+                          <button
+                            className="delete-btn"
+                            onClick={() => handleDeletePayment(p._id)}
+                          >
                             ✕
                           </button>
                         </td>
@@ -1287,18 +1493,34 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
               </div>
 
               <div className="summary-bar-row no-print">
-                <SummaryBar sichai={sumCost(fullSichai)} perai={sumCost(fullPerai)} paid={summary.totalPaid} due={summary.due} />
+                <SummaryBar
+                  sichai={sumCost(fullSichai)}
+                  perai={sumCost(fullPerai)}
+                  paid={summary.totalPaid}
+                  due={summary.due}
+                />
                 {summary.due > 0 && activeFarmer.phone && (
                   <div className="reminder-btns">
                     <a
                       className="whatsapp-btn"
-                      href={buildWhatsAppLink(activeFarmer.phone, activeFarmer.name, summary.due)}
+                      href={buildWhatsAppLink(
+                        activeFarmer.phone,
+                        activeFarmer.name,
+                        summary.due,
+                      )}
                       target="_blank"
                       rel="noreferrer"
                     >
                       📲 WhatsApp रिमाइंडर भेजें
                     </a>
-                    <a className="sms-btn" href={buildSmsLink(activeFarmer.phone, activeFarmer.name, summary.due)}>
+                    <a
+                      className="sms-btn"
+                      href={buildSmsLink(
+                        activeFarmer.phone,
+                        activeFarmer.name,
+                        summary.due,
+                      )}
+                    >
                       💬 SMS भेजें
                     </a>
                   </div>
