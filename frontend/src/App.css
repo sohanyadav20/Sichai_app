@@ -625,6 +625,14 @@ td.empty {
   border-radius: 4px;
 }
 
+/* सिंचाई / ईख पेराई चुनने वाले बटन */
+.type-switch {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
 .filtered-total {
   margin-top: 10px;
   font-weight: bold;

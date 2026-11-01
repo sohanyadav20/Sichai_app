@@ -127,6 +127,7 @@ export default function ReportsView({ theme }) {
   const yearTotalCost = data.months.reduce((s, m) => s + m.totalCost, 0);
   const yearTotalPaid = data.months.reduce((s, m) => s + m.totalPaid, 0);
   const yearHours = data.months.reduce((s, m) => s + m.hours, 0);
+  const yearNad = data.months.reduce((s, m) => s + (m.nad || 0), 0);
   const maxCrop = Math.max(1, ...data.crops.map((c) => c.totalCost));
 
   return (
@@ -159,6 +160,12 @@ export default function ReportsView({ theme }) {
           <span className="dash-label">कुल घंटे</span>
           <span className="dash-value">{yearHours.toFixed(1)}</span>
         </div>
+        {yearNad > 0 && (
+          <div className="dash-stat">
+            <span className="dash-label">ईख पेराई (कुल नाद)</span>
+            <span className="dash-value">{Number(yearNad.toFixed(2))}</span>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -183,6 +190,7 @@ export default function ReportsView({ theme }) {
                 <th>महीना</th>
                 <th>एंट्री</th>
                 <th>घंटे</th>
+                <th>नाद</th>
                 <th>सिंचाई (₹)</th>
                 <th>जमा (₹)</th>
               </tr>
@@ -193,6 +201,7 @@ export default function ReportsView({ theme }) {
                   <td>{MONTHS[i]}</td>
                   <td>{m.entries}</td>
                   <td>{m.hours.toFixed(1)}</td>
+                  <td>{m.nad ? Number(m.nad.toFixed(2)) : '—'}</td>
                   <td>{m.totalCost.toFixed(2)}</td>
                   <td>{m.totalPaid.toFixed(2)}</td>
                 </tr>
@@ -201,6 +210,7 @@ export default function ReportsView({ theme }) {
                 <td>कुल</td>
                 <td>{data.months.reduce((s, m) => s + m.entries, 0)}</td>
                 <td>{yearHours.toFixed(1)}</td>
+                <td>{yearNad ? Number(yearNad.toFixed(2)) : '—'}</td>
                 <td>{yearTotalCost.toFixed(2)}</td>
                 <td>{yearTotalPaid.toFixed(2)}</td>
               </tr>
@@ -219,7 +229,11 @@ export default function ReportsView({ theme }) {
               <div className="crop-bar" style={{ width: `${(c.totalCost / maxCrop) * 100}%` }} />
             </div>
             <div className="crop-val">
-              {money(c.totalCost)} <small>({c.hours.toFixed(1)} घं.)</small>
+              {money(c.totalCost)} <small>
+                ({[c.hours > 0 && `${c.hours.toFixed(1)} घं.`, c.nad > 0 && `${Number(c.nad.toFixed(2))} नाद`]
+                  .filter(Boolean)
+                  .join(' + ') || '—'})
+              </small>
             </div>
           </div>
         ))}
@@ -234,6 +248,7 @@ export default function ReportsView({ theme }) {
                 <th>साल</th>
                 <th>एंट्री</th>
                 <th>घंटे</th>
+                <th>नाद</th>
                 <th>सिंचाई (₹)</th>
                 <th>जमा (₹)</th>
               </tr>
@@ -244,6 +259,7 @@ export default function ReportsView({ theme }) {
                   <td>{y.year}</td>
                   <td>{y.entries}</td>
                   <td>{y.hours.toFixed(1)}</td>
+                  <td>{y.nad ? Number(y.nad.toFixed(2)) : '—'}</td>
                   <td>{y.totalCost.toFixed(2)}</td>
                   <td>{y.totalPaid.toFixed(2)}</td>
                 </tr>
