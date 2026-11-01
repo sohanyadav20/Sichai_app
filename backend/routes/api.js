@@ -230,45 +230,18 @@ router.get('/farmers/:id/entries', async (req, res) => {
   }
 });
 
-const PERAI_CROP = 'ईख पेराई';
-
 function parseEntryBody(body) {
-  const { date, crop, hours, minutes, rate, place, nad } = body;
-  const type = body.type === 'perai' ? 'perai' : 'sichai';
-  const r = Number(rate);
-  const placeText = String(place || '').trim();
-
-  if (!date || isNaN(r) || r < 0) return { error: 'सभी फील्ड सही भरें।' };
-
-  // ---- ईख की पेराई: नाद x rate ----
-  if (type === 'perai') {
-    const n = Number(nad);
-    if (isNaN(n) || n <= 0) return { error: 'नाद की संख्या सही भरें।' };
-    const cost = round2(n * r);
-    return {
-      data: {
-        type,
-        date,
-        crop: String(crop || '').trim() || PERAI_CROP,
-        place: placeText,
-        hours: 0,
-        minutes: 0,
-        nad: n,
-        rate: r,
-        cost
-      }
-    };
-  }
-
-  // ---- सिंचाई: ghante/minute x rate ----
+  const { date, crop, hours, minutes, rate, place } = body;
   const h = Number(hours) || 0;
   const m = Number(minutes) || 0;
-  if (!crop) return { error: 'सभी फील्ड सही भरें।' };
+  const r = Number(rate);
+
+  if (!date || !crop || isNaN(r)) return { error: 'सभी फील्ड सही भरें।' };
   if (h === 0 && m === 0) return { error: 'कृपया घंटा या मिनट भरें।' };
   if (m >= 60) return { error: 'मिनट 60 से कम होना चाहिए।' };
 
   const cost = round2(((h * 60 + m) / 60) * r);
-  return { data: { type, date, crop, place: placeText, hours: h, minutes: m, nad: 0, rate: r, cost } };
+  return { data: { date, crop, place: String(place || '').trim(), hours: h, minutes: m, rate: r, cost } };
 }
 
 router.post('/farmers/:id/entries', requireAdmin, async (req, res) => {
@@ -448,7 +421,6 @@ router.get('/reports/summary', requireAdmin, async (req, res) => {
     const year = years.includes(requested) ? requested : years.includes(currentYear) ? currentYear : years[0];
 
     const hoursOf = (e) => (e.hours * 60 + e.minutes) / 60;
-    const nadOf = (e) => (e.type === 'perai' ? Number(e.nad) || 0 : 0);
 
     // Selected year ke 12 mahine
     const months = Array.from({ length: 12 }, (_, i) => ({
@@ -456,7 +428,6 @@ router.get('/reports/summary', requireAdmin, async (req, res) => {
       totalCost: 0,
       totalPaid: 0,
       hours: 0,
-      nad: 0,
       entries: 0
     }));
     const cropMap = {};
@@ -467,12 +438,10 @@ router.get('/reports/summary', requireAdmin, async (req, res) => {
       if (idx < 0 || idx > 11) return;
       months[idx].totalCost += e.cost;
       months[idx].hours += hoursOf(e);
-      months[idx].nad += nadOf(e);
       months[idx].entries += 1;
-      if (!cropMap[e.crop]) cropMap[e.crop] = { crop: e.crop, totalCost: 0, hours: 0, nad: 0, entries: 0 };
+      if (!cropMap[e.crop]) cropMap[e.crop] = { crop: e.crop, totalCost: 0, hours: 0, entries: 0 };
       cropMap[e.crop].totalCost += e.cost;
       cropMap[e.crop].hours += hoursOf(e);
-      cropMap[e.crop].nad += nadOf(e);
       cropMap[e.crop].entries += 1;
     });
     payments.forEach((p) => {
@@ -486,11 +455,10 @@ router.get('/reports/summary', requireAdmin, async (req, res) => {
       m.totalCost = round2(m.totalCost);
       m.totalPaid = round2(m.totalPaid);
       m.hours = round2(m.hours);
-      m.nad = round2(m.nad);
     });
 
     const crops = Object.values(cropMap)
-      .map((c) => ({ ...c, totalCost: round2(c.totalCost), hours: round2(c.hours), nad: round2(c.nad) }))
+      .map((c) => ({ ...c, totalCost: round2(c.totalCost), hours: round2(c.hours) }))
       .sort((a, b) => b.totalCost - a.totalCost);
 
     // Saal-dar-saal summary
@@ -498,13 +466,11 @@ router.get('/reports/summary', requireAdmin, async (req, res) => {
       let totalCost = 0;
       let totalPaid = 0;
       let hours = 0;
-      let nad = 0;
       let count = 0;
       entries.forEach((e) => {
         if (Number(String(e.date).slice(0, 4)) === y) {
           totalCost += e.cost;
           hours += hoursOf(e);
-          nad += nadOf(e);
           count += 1;
         }
       });
@@ -516,7 +482,6 @@ router.get('/reports/summary', requireAdmin, async (req, res) => {
         totalCost: round2(totalCost),
         totalPaid: round2(totalPaid),
         hours: round2(hours),
-        nad: round2(nad),
         entries: count
       };
     });
@@ -549,7 +514,7 @@ router.get('/export/entries.csv', requireAdmin, async (req, res) => {
     ]);
     const byId = Object.fromEntries(farmers.map((f) => [String(f._id), f]));
     const rows = [
-      ['किसान', 'मोबाइल', 'तारीख', 'प्रकार', 'फसल/काम', 'जगह/खेत', 'घंटे', 'मिनट', 'नाद', 'रेट (₹/घंटा या ₹/नाद)', 'राशि (₹)']
+      ['किसान', 'मोबाइल', 'तारीख', 'फसल', 'जगह/खेत', 'घंटे', 'मिनट', 'रेट (₹/घंटा)', 'राशि (₹)']
     ];
     entries.forEach((e) => {
       const f = byId[String(e.farmerId)];
@@ -557,12 +522,10 @@ router.get('/export/entries.csv', requireAdmin, async (req, res) => {
         f ? f.name : '(हटाया गया)',
         f ? f.phone : '',
         e.date,
-        e.type === 'perai' ? 'ईख पेराई' : 'सिंचाई',
         e.crop,
         e.place || '',
         e.hours,
         e.minutes,
-        e.type === 'perai' ? e.nad : '',
         e.rate,
         e.cost
       ]);
