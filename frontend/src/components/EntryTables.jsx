@@ -1,10 +1,15 @@
-import React from 'react';
-import { fmtNum } from '../utils';
+import React from "react";
+import { fmtNum } from "../utils";
 
 // ---------- सिंचाई ka table — bilkul pehle jaisa (घंटे aur मिनट alag columns) ----------
 // onEdit / onDelete diye jaayein to har row me ✎ ✕ buttons dikhte hain (admin screen),
 // nahi to simple table (print aur kisan wala page).
-export function SichaiTable({ rows, emptyText = 'कोई एंट्री नहीं', onEdit, onDelete }) {
+export function SichaiTable({
+  rows,
+  emptyText = "कोई एंट्री नहीं",
+  onEdit,
+  onDelete,
+}) {
   const withActions = !!(onEdit || onDelete);
   const totalHours = rows.reduce((s, e) => s + e.hours + e.minutes / 60, 0);
   const totalCost = rows.reduce((s, e) => s + e.cost, 0);
@@ -40,7 +45,10 @@ export function SichaiTable({ rows, emptyText = 'कोई एंट्री �
                   </button>
                 )}
                 {onDelete && (
-                  <button className="delete-btn" onClick={() => onDelete(e._id)}>
+                  <button
+                    className="delete-btn"
+                    onClick={() => onDelete(e._id)}
+                  >
                     ✕
                   </button>
                 )}
@@ -70,7 +78,12 @@ export function SichaiTable({ rows, emptyText = 'कोई एंट्री �
 }
 
 // ---------- ईख पेराई ka alag table — तारीख, नाद, रेट, पैसा (जगह/खेत nahi) ----------
-export function PeraiTable({ rows, emptyText = 'कोई पेराई एंट्री नहीं', onEdit, onDelete }) {
+export function PeraiTable({
+  rows,
+  emptyText = "कोई पेराई एंट्री नहीं",
+  onEdit,
+  onDelete,
+}) {
   const withActions = !!(onEdit || onDelete);
   const totalNad = rows.reduce((s, e) => s + (Number(e.nad) || 0), 0);
   const totalCost = rows.reduce((s, e) => s + e.cost, 0);
@@ -100,7 +113,10 @@ export function PeraiTable({ rows, emptyText = 'कोई पेराई एं
                   </button>
                 )}
                 {onDelete && (
-                  <button className="delete-btn" onClick={() => onDelete(e._id)}>
+                  <button
+                    className="delete-btn"
+                    onClick={() => onDelete(e._id)}
+                  >
                     ✕
                   </button>
                 )}
@@ -131,24 +147,36 @@ export function PeraiTable({ rows, emptyText = 'कोई पेराई एं
 
 // ---------- कुल सिंचाई | (ईख पेराई) | कुल जमा | बकाया ----------
 // Agar ईख पेराई ka paisa 0 hai to line bilkul pehle jaisi dikhti hai (पेराई wala hissa chhup jata hai).
-const NORMAL_LABELS = { sichai: 'कुल सिंचाई', perai: 'ईख पेराई', paid: 'कुल जमा', due: 'बकाया' };
+const NORMAL_LABELS = {
+  sichai: "कुल सिंचाई",
+  perai: "ईख पेराई",
+  paid: "कुल जमा",
+  due: "बकाया",
+};
 export const RANGE_LABELS = {
-  sichai: 'इस अवधि की सिंचाई',
-  perai: 'इस अवधि की ईख पेराई',
-  paid: 'इस अवधि में जमा',
-  due: 'इस अवधि का बकाया'
+  sichai: "कुल सिंचाई",
+  perai: "कुल ईख पेराई",
+  paid: "कुल जमा",
+  due: "कुल बकाया",
 };
 
-export function SummaryBar({ sichai, perai, paid, due, labels = NORMAL_LABELS }) {
+export function SummaryBar({
+  sichai,
+  perai,
+  paid,
+  due,
+  labels = NORMAL_LABELS,
+}) {
   return (
     <div className="summary-bar">
-      {labels.sichai}: ₹{sichai.toFixed(2)} &nbsp;|&nbsp;{' '}
+      {labels.sichai}: ₹{sichai.toFixed(2)} &nbsp;|&nbsp;{" "}
       {perai > 0 && (
         <>
-          {labels.perai}: ₹{perai.toFixed(2)} &nbsp;|&nbsp;{' '}
+          {labels.perai}: ₹{perai.toFixed(2)} &nbsp;|&nbsp;{" "}
         </>
       )}
-      {labels.paid}: ₹{paid.toFixed(2)} &nbsp;|&nbsp; {labels.due}: ₹{due.toFixed(2)}
+      {labels.paid}: ₹{paid.toFixed(2)} &nbsp;|&nbsp; {labels.due}: ₹
+      {due.toFixed(2)}
     </div>
   );
 }

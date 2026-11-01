@@ -376,7 +376,7 @@ function AdminGate({ theme, toggleTheme }) {
         <div className="login-card-header">
           <div className="login-avatar">👤</div>
           <h1>Irrigation Register</h1>
-          <p>Login in Admin Panel</p>
+          <p>Welcome To Admin Panel</p>
         </div>
 
         <div className="login-card-body">
@@ -939,7 +939,7 @@ function AdminApp({ auth, onLogout, theme, toggleTheme }) {
           ) : view === "dashboard" ? (
             <div className="dashboard">
               <h2>📊 Dashboard - In one view</h2>
-              {dashboardLoading && <p>लोड हो रहा है...</p>}
+              {dashboardLoading && <p>Loading...</p>}
               {dashboard && (
                 <>
                   <div className="dashboard-totals">
